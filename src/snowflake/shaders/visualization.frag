@@ -12,37 +12,22 @@ uniform float u_rho;
 in vec2 v_uv;
 out vec4 color;
 
-ivec2 tfmCoord(ivec2 p) {
-    int x = p.x;int y = p.y;
-    int a = 1;int b = 0;int c = 0;int d = 1;
-    
-    if (x > 0 && y >= 0 && y < x) { // sextant 1
-        a = 1;b = 0;c = 0;d = 1;
-    }
-    else if (x > 0 && y >= 0 && y >= x) { // sextant 2
-        a = 0;b = 1;c = -1;d = 1;
-    }
-    else if (x <= 0 && y > 0) { // sextant 3
-        a = -1;b = 1;c = -1;d = 0;
-    }
-    else if (x < 0 && y <= 0 && x < y) { // sextant 4
-        a = -1;b = 0;c =  0;d = -1;
-    }
-    else if (x < 0 && y <= 0 && x >= y) { // sextant 5
-        a = 0;b =-1;c = 1;d = -1;
-    }
-    else if (x >= 0 && y < 0) { // sextant 6
-        a = 1; b = -1; c = 1; d = 0;
-    }
+ivec2 symmetryTfm(ivec2 p) {
+    // transform hexagon coordinate to lower half of first sextant
+    bool c0 = p.y >= 0;   //        c1
+    bool c1 = p.y >= p.x; //    c2 | /
+    bool c2 = p.x <= 0;   //       |/   c0
+    bool c3 = p.y <= 0;   //    ---+---
+    bool c4 = p.x > p.y;  //  c3  /|
+    bool c5 = p.x >= 0;   //     / | c5
+                          //     c4
+    int a = c5 && !c1 ? 1 : (c2 && !c4 ? -1 : 0);
+    int b = c1 && !c3 ? 1 : (c4 && !c0 ? -1 : 0);
+    int c = c0 && !c2 ? 1 : (c3 && !c5 ? -1 : 0);
 
-    int x_ = a * x + b * y;
-    int y_ = c * x + d * y;
-
-    if (2 * y_ > x_) {
-        y_ = x_ - y_;
-    }
-
-    return ivec2(x_, y_);
+    p = ivec2(a * p.x + b * p.y, - b * p.x + c * p.y);
+    p.y = 2 * p.y > p.x ? p.x - p.y : p.y;
+    return p;
 }
 
 vec3 iceColor(vec4 cell) {
@@ -77,7 +62,7 @@ void main () {
     mat2 tfm = mat2(1., 1., 0., 2.);
     hexCenter = hexCenter * tfm;
 
-    ivec2 coord = tfmCoord(ivec2(hexCenter));
+    ivec2 coord = symmetryTfm(ivec2(hexCenter));
     vec4 cell = texelFetch(u_latticeTexture, coord, 0);
 
     bool isFrozen = cell.x > 0.5;
