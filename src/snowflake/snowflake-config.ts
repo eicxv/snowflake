@@ -17,7 +17,7 @@ export interface SnowflakeSimConfig {
   kappa: number; // freezing phase; amount of vapor which freezes
   rho: number; // initial vapor density
   sigma: number; // noise phase; size of perturbation in vapor density
-  latticeShortRadius: number; // size of hexagonal lattice
+  latticeLongRadius: number; // size of hexagonal lattice
   steps: number; // number of simulation iterations
 }
 
@@ -45,7 +45,7 @@ export const simConfig1: SnowflakeSimConfig = {
   kappa: 0.6,
   rho: 1.1,
   sigma: 0,
-  latticeShortRadius: 701,
+  latticeLongRadius: 701,
   steps: 500,
 };
 
@@ -58,7 +58,7 @@ export const fig9aSimConfig: SnowflakeSimConfig = {
   kappa: 0.003,
   rho: 0.4,
   sigma: 0,
-  latticeShortRadius: 701,
+  latticeLongRadius: 701,
   steps: 1000,
 };
 
@@ -71,7 +71,7 @@ export const fig9fSimConfig: SnowflakeSimConfig = {
   kappa: 0.003,
   rho: 0.5,
   sigma: 0,
-  latticeShortRadius: 701,
+  latticeLongRadius: 701,
   steps: 200,
 };
 
@@ -84,7 +84,7 @@ export const fig13rSimConfig: SnowflakeSimConfig = {
   mu: 0.14,
   gamma: 0.0006,
   sigma: 0,
-  latticeShortRadius: 701,
+  latticeLongRadius: 701,
   steps: 2000,
 };
 
@@ -97,7 +97,7 @@ export const stellarDendriteSimConfig: SnowflakeSimConfig = {
   kappa: 0.05,
   rho: 0.8,
   sigma: 0,
-  latticeShortRadius: 701,
+  latticeLongRadius: 701,
   steps: 6000,
 };
 
@@ -110,6 +110,6 @@ export const fernlikeSimConfig: SnowflakeSimConfig = {
   mu: 0.015,
   gamma: 0.0005,
   sigma: 0,
-  latticeShortRadius: 501,
+  latticeLongRadius: 501,
   steps: 3000,
 };

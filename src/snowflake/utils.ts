@@ -25,7 +25,7 @@ export function examineBuffer(buffer: Float32Array): {
 }
 
 export function expectedMass(config: SnowflakeSimConfig): number {
-  const r = config.latticeShortRadius;
+  const r = config.latticeLongRadius;
   const totalCells = r % 2 == 0 ? (r * r) / 4 + r / 2 : ((r + 1) * (r + 1)) / 4;
   let mass = totalCells * config.rho;
   mass += 1 - config.rho; // adjust for initial frozen cell

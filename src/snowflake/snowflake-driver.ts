@@ -141,7 +141,7 @@ export class SnowflakeDriver extends AbstractDriver {
   }
 
   private calcSimResolution(): [number, number] {
-    const x = this.simConfig.latticeShortRadius;
+    const x = this.simConfig.latticeLongRadius;
     const y = Math.ceil(x / 2);
     return [x, y];
   }
