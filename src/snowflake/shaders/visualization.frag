@@ -6,6 +6,9 @@ precision highp float;
 precision mediump float;
 #endif
 
+#define SQRT3 1.73205080757
+#define INV_SQRT3 0.57735026919
+
 uniform highp sampler2D u_latticeTexture;
 uniform float u_rho;
 
@@ -40,13 +43,11 @@ vec3 vaporColor(vec4 cell) {
     return vec3(c);
 }
 
-vec4 HexDistAndCenter(vec2 uv) {
-    vec2 s = vec2(1, 1.7320508);
-    vec2 c1 = round(uv / s);
-    vec2 o1 = uv / s - c1;
-    vec2 c2 = c1 + sign(o1) * vec2(0.5, 0.5);
-    vec2 o2 = uv - c2 * s;
-    o1 = o1 * s;
+vec4 hexOffsetAndCenter(vec2 uv) {
+    vec2 c1 = round(uv * vec2(1., INV_SQRT3));
+    vec2 o1 = uv - c1 * vec2(1., SQRT3);;
+    vec2 c2 = c1 + sign(o1) * 0.5;
+    vec2 o2 = uv - c2 * vec2(1., SQRT3);;
     return dot(o1, o1) < dot(o2, o2) ? vec4(o1, c1) : vec4(o2, c2);
 }
 
@@ -56,7 +57,7 @@ void main () {
     vec2 uv = v_uv;
     uv = (uv - 0.5) * 2.;
     uv *= float(res.x);
-    vec4 hex = HexDistAndCenter(uv);
+    vec4 hex = hexOffsetAndCenter(uv);
     vec2 hexCenter = hex.zw;
 
     mat2 tfm = mat2(1., 1., 0., 2.);
