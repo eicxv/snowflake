@@ -1,4 +1,5 @@
 import { SnowflakeSimConfig } from "./snowflake-config";
+import { SnowflakeDriver } from "./snowflake-driver";
 
 function partitionArray(arr: Float32Array, spacing: number): Float32Array[] {
   const output = [];
@@ -8,7 +9,10 @@ function partitionArray(arr: Float32Array, spacing: number): Float32Array[] {
   return output;
 }
 
-export function examineBuffer(buffer: Float32Array): [number, number] {
+export function examineBuffer(buffer: Float32Array): {
+  frozenCells: number;
+  mass: number;
+} {
   const data = partitionArray(buffer, 4);
 
   let frozenCells = 0;
@@ -17,12 +21,31 @@ export function examineBuffer(buffer: Float32Array): [number, number] {
     frozenCells += cell[0];
     mass += cell[1] + cell[2] + cell[3];
   }
-  return [frozenCells, mass];
+  return { frozenCells, mass };
 }
 
 export function expectedMass(config: SnowflakeSimConfig): number {
-  const [w, h] = config.dimensions;
-  let mass = w * h * config.rho;
+  const r = config.latticeShortRadius;
+  const totalCells = r % 2 == 0 ? (r * r) / 4 + r / 2 : ((r + 1) * (r + 1)) / 4;
+  let mass = totalCells * config.rho;
   mass += 1 - config.rho; // adjust for initial frozen cell
   return mass;
 }
+
+function logMassFunction(): (driver: SnowflakeDriver, change: boolean) => void {
+  let prevMass: number | null = null;
+
+  function logMass(driver: SnowflakeDriver, change: boolean = true): void {
+    const { mass } = examineBuffer(driver.dumpTexture());
+    console.log("mass", mass);
+    if (change && prevMass != null) {
+      const dm = mass - prevMass;
+      if (dm > 0.00001) console.log("mass change:", dm);
+    }
+    prevMass = mass;
+  }
+
+  return logMass;
+}
+
+export const logMass = logMassFunction();

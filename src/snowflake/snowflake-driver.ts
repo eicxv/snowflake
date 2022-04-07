@@ -4,11 +4,11 @@ import { AbstractDriver } from "../webgl/driver";
 import {
   createFramebuffer,
   createTexture,
-  defaultComputeAttributeData,
+  defaultAttributeData,
   getExtension,
 } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
-import { RenderProgram } from "./path-tracer/rendering-program";
+import { RenderProgram } from "./rendering/rendering-program";
 import {
   SnowflakeSimConfig,
   SnowflakeUniformCollection,
@@ -16,23 +16,23 @@ import {
 } from "./snowflake-config";
 import {
   AttachmentProgram,
-  DiffusionFreezingProgram,
   DiffusionProgram,
+  DispProgram,
+  FillProgram,
   FreezingProgram,
   MeltingProgram,
-  NoiseProgram,
   VisualizationProgram,
 } from "./snowflake-programs";
 
 export class SnowflakeDriver extends AbstractDriver {
-  width: number;
-  height: number;
-  vao: WebGLVertexArrayObject;
+  computeVao: WebGLVertexArrayObject;
+  visualizationVao: WebGLVertexArrayObject;
   latticeVariable: ComputeVariable;
   simConfig: SnowflakeSimConfig;
   visConfig: SnowflakeVisConfig;
   uniforms: SnowflakeUniformCollection;
   internalSteps: number;
+  simResolution: [number, number];
   programs: Record<string, Program>;
   camera: Camera;
   constructor(
@@ -49,14 +49,65 @@ export class SnowflakeDriver extends AbstractDriver {
     this.simConfig = simConfig;
     this.visConfig = visConfig;
     this.internalSteps = visConfig.internalSteps;
-    this.width = simConfig.dimensions[0];
-    this.height = simConfig.dimensions[1];
-    canvas.width = this.width;
-    canvas.height = this.height;
 
-    this.vao = this.createComputeVao();
+    this.simResolution = this.calcSimResolution();
+    this.computeVao = this.createComputeVao(this.createAttributeData());
+    this.visualizationVao = this.createComputeVao(defaultAttributeData);
     this.latticeVariable = this.createLatticeVariable();
-    this.uniforms = {
+    this.uniforms = this.createUniforms();
+    this.programs = this.createPrograms();
+
+    this.gl.blendEquation(this.gl.FUNC_ADD);
+    this.gl.blendFunc(this.gl.ONE, this.gl.ZERO);
+  }
+
+  private createPrograms(): Record<string, Program> {
+    const programs = {
+      attachment: new AttachmentProgram(
+        this.gl,
+        this.uniforms,
+        this.computeVao,
+        null
+      ),
+      diffusion: new DiffusionProgram(
+        this.gl,
+        this.uniforms,
+        this.computeVao,
+        null
+      ),
+      melting: new MeltingProgram(
+        this.gl,
+        this.uniforms,
+        this.computeVao,
+        null
+      ),
+      freezing: new FreezingProgram(
+        this.gl,
+        this.uniforms,
+        this.computeVao,
+        null
+      ),
+      fill: new FillProgram(this.gl, this.uniforms, this.computeVao, null),
+      disp: new DispProgram(
+        this.gl,
+        this.uniforms,
+        this.visualizationVao,
+        null
+      ),
+      visualization: new VisualizationProgram(
+        this.gl,
+        this.uniforms,
+        this.visualizationVao,
+        null
+      ),
+      render: new RenderProgram(this.gl, this.uniforms, this.computeVao, null),
+    };
+    return programs;
+  }
+
+  private createUniforms(): SnowflakeUniformCollection {
+    const simConfig = this.simConfig;
+    const uniforms = {
       u_alpha: simConfig.alpha,
       u_beta: simConfig.beta,
       u_theta: simConfig.theta,
@@ -65,34 +116,34 @@ export class SnowflakeDriver extends AbstractDriver {
       u_kappa: simConfig.kappa,
       u_rho: simConfig.rho,
       u_sigma: simConfig.sigma,
-      u_resolution: simConfig.dimensions,
       u_latticeTexture: this.latticeVariable.getTexture(),
       u_step: this.steps,
       u_viewProjectionMatrix: this.camera.viewProjectionMatrix,
       u_cameraPosition: this.camera.position,
     };
-    this.programs = {
-      attachment: new AttachmentProgram(this.gl, this.uniforms, this.vao, null),
-      diffusion: new DiffusionProgram(this.gl, this.uniforms, this.vao, null),
-      melting: new MeltingProgram(this.gl, this.uniforms, this.vao, null),
-      freezing: new FreezingProgram(this.gl, this.uniforms, this.vao, null),
-      diffusionFreezing: new DiffusionFreezingProgram(
-        this.gl,
-        this.uniforms,
-        this.vao,
-        null
-      ),
-      noise: new NoiseProgram(this.gl, this.uniforms, this.vao, null),
-      visualization: new VisualizationProgram(
-        this.gl,
-        this.uniforms,
-        this.vao,
-        null
-      ),
-      render: new RenderProgram(this.gl, this.uniforms, this.vao, null),
-    };
-    this.gl.blendEquation(this.gl.FUNC_ADD);
-    this.gl.blendFunc(this.gl.ONE, this.gl.ZERO);
+    return uniforms;
+  }
+
+  private createAttributeData(): Float32Array {
+    const dims = this.simResolution;
+    const hx = 1 / dims[0];
+    const hy = 1 / dims[1];
+    const shiftX = -2 * hx; // shift bottom left x-coord
+    const shiftY = dims[0] % 2 == 0 ? hy : 0; // shift top right y-coord
+
+    // prettier-ignore
+    const attributeData = new Float32Array([
+      -1.0 + shiftX, -1.0, 0.0, 0.0,
+      1.0, 1.0 + shiftY, 1.0, 1.0,
+      1.0, -1.0, 1.0, 0.0,
+    ]);
+    return attributeData;
+  }
+
+  private calcSimResolution(): [number, number] {
+    const x = this.simConfig.latticeShortRadius;
+    const y = Math.ceil(x / 2);
+    return [x, y];
   }
 
   animate(): void {
@@ -107,8 +158,33 @@ export class SnowflakeDriver extends AbstractDriver {
     this.animateId = requestAnimationFrame(this.animate);
   }
 
+  fill(): void {
+    const [width, height] = this.simResolution;
+    this.gl.viewport(0, 0, width, height);
+    const variable = this.latticeVariable;
+
+    this.uniforms.u_latticeTexture = variable.getTexture();
+    variable.advance();
+    this.programs.fill.framebuffer = variable.getFramebuffer();
+    this.programs.fill.run();
+  }
+
+  disp(): void {
+    const [width, height] = this.visConfig.resolution;
+    this.gl.viewport(0, 0, width, height);
+    const variable = this.latticeVariable;
+
+    this.gl.canvas.width = width;
+    this.gl.canvas.height = height;
+
+    this.uniforms.u_latticeTexture = variable.getTexture();
+    this.programs.disp.framebuffer = null;
+    this.programs.disp.run();
+  }
+
   step(): void {
-    this.gl.viewport(0, 0, this.width, this.height);
+    const [width, height] = this.simResolution;
+    this.gl.viewport(0, 0, width, height);
     const variable = this.latticeVariable;
 
     this.uniforms.u_latticeTexture = variable.getTexture();
@@ -130,13 +206,6 @@ export class SnowflakeDriver extends AbstractDriver {
     variable.advance();
     this.programs.melting.framebuffer = variable.getFramebuffer();
     this.programs.melting.run();
-
-    if (this.uniforms.u_sigma != 0) {
-      this.uniforms.u_latticeTexture = variable.getTexture();
-      variable.advance();
-      this.programs.noise.framebuffer = variable.getFramebuffer();
-      this.programs.noise.run();
-    }
 
     this.steps += 1;
     this.uniforms.u_step = this.steps;
@@ -163,7 +232,7 @@ export class SnowflakeDriver extends AbstractDriver {
   }
 
   initialState(): ArrayBufferView {
-    const [width, height] = this.simConfig.dimensions;
+    const [width, height] = this.simResolution;
     const size = 4 * height * width;
     const defaultCell = [0, 0, 0, this.simConfig.rho];
     const state = new Float32Array(size);
@@ -172,15 +241,15 @@ export class SnowflakeDriver extends AbstractDriver {
         state[i + j] = defaultCell[j];
       }
     }
-    const center = 4 * (Math.floor(height / 2) * width + Math.floor(width / 2));
-    state[center] = 1; // a = 1
-    state[center + 2] = 1; // c = 1
-    state[center + 3] = 0; // d = 0
+    state[0] = 1; // a = 1
+    state[2] = 1; // c = 1
+    state[3] = 0; // d = 0
     return state;
   }
 
   createLatticeVariable(): ComputeVariable {
     const gl = this.gl;
+    const [width, height] = this.simResolution;
     const textureData = [this.initialState(), null];
     const internalFormat = gl.RGBA32F;
     const format = gl.RGBA;
@@ -189,8 +258,8 @@ export class SnowflakeDriver extends AbstractDriver {
         gl,
         gl.FLOAT,
         texData,
-        this.width,
-        this.height,
+        width,
+        height,
         format,
         internalFormat
       )
@@ -203,11 +272,13 @@ export class SnowflakeDriver extends AbstractDriver {
     return concentrationVariable;
   }
 
-  createComputeVao(): WebGLVertexArrayObject {
+  private createComputeVao(
+    attributeData: Float32Array
+  ): WebGLVertexArrayObject {
     const gl = this.gl;
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, defaultComputeAttributeData, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, attributeData, gl.STATIC_DRAW);
     const attributes = {
       a_position: 0,
       a_textureCoord: 1,
@@ -235,8 +306,7 @@ export class SnowflakeDriver extends AbstractDriver {
 
   dumpTexture(): Float32Array {
     const gl = this.gl;
-    const height = this.width;
-    const width = this.height;
+    const [width, height] = this.simResolution;
     const framebuffer = this.latticeVariable.getFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     const buffer = new Float32Array(4 * width * height);

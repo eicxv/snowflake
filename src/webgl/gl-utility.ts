@@ -6,7 +6,7 @@ import {
   VertexShader,
 } from "./program";
 
-export const defaultComputeAttributeData = new Float32Array([
+export const defaultAttributeData = new Float32Array([
   -1.0, 1.0, 0.0, 1.0,
 
   -1.0, -1.0, 0.0, 0.0,

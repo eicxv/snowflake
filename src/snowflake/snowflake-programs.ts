@@ -1,15 +1,95 @@
 import { compileShader } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
 import attachmentSource from "./shaders/attachment.frag?raw";
-import computeNeighborsSource from "./shaders/compute-neighbors.vert?raw";
 import computeSource from "./shaders/compute.vert?raw";
 import diffusionFreezingSource from "./shaders/diffusion-freezing.frag?raw";
 import diffusionSource from "./shaders/diffusion.frag?raw";
+import dispSource from "./shaders/disp.frag?raw";
+import fillSource from "./shaders/fill.frag?raw";
 import freezingSource from "./shaders/freezing.frag?raw";
 import meltingSource from "./shaders/melting.frag?raw";
 import noiseSource from "./shaders/noise.frag?raw";
 import visualizationSource from "./shaders/visualization.frag?raw";
 import { SnowflakeUniformCollection } from "./snowflake-config";
+
+export class DispProgram extends Program {
+  constructor(
+    gl: WebGL2RenderingContext,
+    uniforms: SnowflakeUniformCollection,
+    vao: WebGLVertexArrayObject,
+    framebuffer: WebGLFramebuffer | null = null
+  ) {
+    const fragShader = compileShader(gl, dispSource, gl.FRAGMENT_SHADER);
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture"];
+    super(
+      gl,
+      fragShader,
+      vertShader,
+      localUniforms,
+      uniforms,
+      vao,
+      framebuffer
+    );
+  }
+
+  run(): void {
+    const gl = this.gl;
+
+    gl.useProgram(this.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindVertexArray(this.vao);
+    const locations = this.locations;
+    const uniforms = this.uniforms as SnowflakeUniformCollection;
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
+    gl.uniform1i(locations.u_latticeTexture, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+}
+
+export class FillProgram extends Program {
+  constructor(
+    gl: WebGL2RenderingContext,
+    uniforms: SnowflakeUniformCollection,
+    vao: WebGLVertexArrayObject,
+    framebuffer: WebGLFramebuffer | null = null
+  ) {
+    const fragShader = compileShader(gl, fillSource, gl.FRAGMENT_SHADER);
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture", "u_rho"];
+    super(
+      gl,
+      fragShader,
+      vertShader,
+      localUniforms,
+      uniforms,
+      vao,
+      framebuffer
+    );
+  }
+
+  run(): void {
+    const gl = this.gl;
+
+    gl.useProgram(this.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindVertexArray(this.vao);
+
+    const locations = this.locations;
+    const uniforms = this.uniforms as SnowflakeUniformCollection;
+
+    gl.uniform1f(locations.u_rho, uniforms.u_rho);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
+    gl.uniform1i(locations.u_latticeTexture, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
+  }
+}
 
 export class DiffusionFreezingProgram extends Program {
   constructor(
@@ -23,12 +103,8 @@ export class DiffusionFreezingProgram extends Program {
       diffusionFreezingSource,
       gl.FRAGMENT_SHADER
     );
-    const vertShader = compileShader(
-      gl,
-      computeNeighborsSource,
-      gl.VERTEX_SHADER
-    );
-    const localUniforms = ["u_latticeTexture", "u_resolution", "u_kappa"];
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture", "u_kappa"];
     super(
       gl,
       fragShader,
@@ -39,6 +115,7 @@ export class DiffusionFreezingProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -48,14 +125,13 @@ export class DiffusionFreezingProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniformCollection;
 
-    gl.uniform2fv(locations.u_resolution, uniforms.u_resolution);
     gl.uniform1f(locations.u_kappa, uniforms.u_kappa);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -67,12 +143,8 @@ export class DiffusionProgram extends Program {
     framebuffer: WebGLFramebuffer | null = null
   ) {
     const fragShader = compileShader(gl, diffusionSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(
-      gl,
-      computeNeighborsSource,
-      gl.VERTEX_SHADER
-    );
-    const localUniforms = ["u_latticeTexture", "u_resolution"];
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture"];
     super(
       gl,
       fragShader,
@@ -83,6 +155,7 @@ export class DiffusionProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -92,13 +165,11 @@ export class DiffusionProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniformCollection;
 
-    gl.uniform2fv(locations.u_resolution, uniforms.u_resolution);
-
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -110,12 +181,8 @@ export class FreezingProgram extends Program {
     framebuffer: WebGLFramebuffer | null = null
   ) {
     const fragShader = compileShader(gl, freezingSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(
-      gl,
-      computeNeighborsSource,
-      gl.VERTEX_SHADER
-    );
-    const localUniforms = ["u_latticeTexture", "u_resolution", "u_kappa"];
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture", "u_kappa"];
     super(
       gl,
       fragShader,
@@ -126,6 +193,7 @@ export class FreezingProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -135,14 +203,13 @@ export class FreezingProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniformCollection;
 
-    gl.uniform2fv(locations.u_resolution, uniforms.u_resolution);
     gl.uniform1f(locations.u_kappa, uniforms.u_kappa);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -154,18 +221,8 @@ export class AttachmentProgram extends Program {
     framebuffer: WebGLFramebuffer | null = null
   ) {
     const fragShader = compileShader(gl, attachmentSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(
-      gl,
-      computeNeighborsSource,
-      gl.VERTEX_SHADER
-    );
-    const localUniforms = [
-      "u_latticeTexture",
-      "u_resolution",
-      "u_alpha",
-      "u_beta",
-      "u_theta",
-    ];
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture", "u_alpha", "u_beta", "u_theta"];
     super(
       gl,
       fragShader,
@@ -176,6 +233,7 @@ export class AttachmentProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -185,7 +243,6 @@ export class AttachmentProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniformCollection;
 
-    gl.uniform2fv(locations.u_resolution, uniforms.u_resolution);
     gl.uniform1f(locations.u_alpha, uniforms.u_alpha);
     gl.uniform1f(locations.u_beta, uniforms.u_beta);
     gl.uniform1f(locations.u_theta, uniforms.u_theta);
@@ -194,7 +251,7 @@ export class AttachmentProgram extends Program {
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -206,17 +263,8 @@ export class MeltingProgram extends Program {
     framebuffer: WebGLFramebuffer | null = null
   ) {
     const fragShader = compileShader(gl, meltingSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(
-      gl,
-      computeNeighborsSource,
-      gl.VERTEX_SHADER
-    );
-    const localUniforms = [
-      "u_latticeTexture",
-      "u_resolution",
-      "u_mu",
-      "u_gamma",
-    ];
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture", "u_mu", "u_gamma"];
     super(
       gl,
       fragShader,
@@ -227,6 +275,7 @@ export class MeltingProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -236,7 +285,6 @@ export class MeltingProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniformCollection;
 
-    gl.uniform2fv(locations.u_resolution, uniforms.u_resolution);
     gl.uniform1f(locations.u_mu, uniforms.u_mu);
     gl.uniform1f(locations.u_gamma, uniforms.u_gamma);
 
@@ -244,7 +292,7 @@ export class MeltingProgram extends Program {
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -268,6 +316,7 @@ export class NoiseProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 
@@ -284,7 +333,7 @@ export class NoiseProgram extends Program {
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
     gl.uniform1i(locations.u_latticeTexture, 0);
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
   }
 }
 
@@ -312,6 +361,7 @@ export class VisualizationProgram extends Program {
       framebuffer
     );
   }
+
   run(): void {
     const gl = this.gl;
 

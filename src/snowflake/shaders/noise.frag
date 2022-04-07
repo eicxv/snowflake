@@ -10,7 +10,7 @@ uniform highp sampler2D u_latticeTexture;
 uniform uint u_step;
 uniform float u_sigma;
 
-in vec2 v_cellCoord;
+in vec2 v_uv;
 out vec4 state;
 
 float hash1( uint n ) {
@@ -20,8 +20,8 @@ float hash1( uint n ) {
 }
 
 void main() {
-    vec4 cell = texture(u_latticeTexture, v_cellCoord);
-    uint seed = u_step + uint(15731.0 * v_cellCoord.x + 789221.0 * v_cellCoord.y);
+    vec4 cell = texture(u_latticeTexture, v_uv);
+    uint seed = u_step + uint(15731.0 * v_uv.x + 789221.0 * v_uv.y);
     cell.w += sign(hash1(seed) - 0.5) * u_sigma;
     state = cell;
 }
