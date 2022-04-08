@@ -21,6 +21,7 @@ import {
   FillProgram,
   FreezingProgram,
   MeltingProgram,
+  NormalProgram,
   VisualizationProgram,
 } from "./snowflake-programs";
 
@@ -100,6 +101,7 @@ export class SnowflakeDriver extends AbstractDriver {
         this.visualizationVao,
         null
       ),
+      normal: new NormalProgram(this.gl, this.uniforms, this.computeVao, null),
       render: new RenderProgram(this.gl, this.uniforms, this.computeVao, null),
     };
     return programs;
@@ -125,11 +127,11 @@ export class SnowflakeDriver extends AbstractDriver {
   }
 
   private createAttributeData(): Float32Array {
-    const dims = this.simResolution;
-    const hx = 1 / dims[0];
-    const hy = 1 / dims[1];
-    const shiftX = -2 * hx; // shift bottom left x-coord
-    const shiftY = dims[0] % 2 == 0 ? hy : 0; // shift top right y-coord
+    const [width, height] = this.simResolution;
+    const hx = 2 / width;
+    const hy = 2 / height;
+    const shiftX = -hx; // shift bottom left x-coord
+    const shiftY = width % 2 == 0 ? -hy / 2 : -hy; // shift top right y-coord
 
     // prettier-ignore
     const attributeData = new Float32Array([
@@ -142,7 +144,7 @@ export class SnowflakeDriver extends AbstractDriver {
 
   private calcSimResolution(): [number, number] {
     const x = this.simConfig.latticeLongRadius;
-    const y = Math.ceil(x / 2);
+    const y = Math.ceil(x / 2) + 1;
     return [x, y];
   }
 
@@ -167,6 +169,16 @@ export class SnowflakeDriver extends AbstractDriver {
     variable.advance();
     this.programs.fill.framebuffer = variable.getFramebuffer();
     this.programs.fill.run();
+  }
+
+  normal(): void {
+    const [width, height] = this.simResolution;
+    this.gl.viewport(0, 0, width, height);
+    const variable = this.latticeVariable;
+
+    this.uniforms.u_latticeTexture = variable.getTexture();
+    this.programs.normal.framebuffer = variable.getFramebuffer(1);
+    this.programs.normal.run();
   }
 
   disp(): void {
@@ -222,12 +234,13 @@ export class SnowflakeDriver extends AbstractDriver {
   }
 
   visualize(): void {
+    this.normal();
     const [width, height] = this.visConfig.resolution;
     this.gl.viewport(0, 0, width, height);
     this.gl.canvas.width = width;
     this.gl.canvas.height = height;
 
-    this.uniforms.u_latticeTexture = this.latticeVariable.getTexture();
+    this.uniforms.u_latticeTexture = this.latticeVariable.getTexture(1);
     this.programs.visualization.run();
   }
 

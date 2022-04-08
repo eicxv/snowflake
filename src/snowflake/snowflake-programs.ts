@@ -1,6 +1,7 @@
 import { compileShader } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
 import attachmentSource from "./shaders/attachment.frag?raw";
+import computeFlippedSource from "./shaders/compute-flipped.vert?raw";
 import computeSource from "./shaders/compute.vert?raw";
 import diffusionFreezingSource from "./shaders/diffusion-freezing.frag?raw";
 import diffusionSource from "./shaders/diffusion.frag?raw";
@@ -8,9 +9,51 @@ import dispSource from "./shaders/disp.frag?raw";
 import fillSource from "./shaders/fill.frag?raw";
 import freezingSource from "./shaders/freezing.frag?raw";
 import meltingSource from "./shaders/melting.frag?raw";
+import normalSource from "./shaders/normal.frag?raw";
 import visualizationSource from "./shaders/visualization.frag?raw";
 import { SnowflakeUniformCollection } from "./snowflake-config";
 
+export class NormalProgram extends Program {
+  constructor(
+    gl: WebGL2RenderingContext,
+    uniforms: SnowflakeUniformCollection,
+    vao: WebGLVertexArrayObject,
+    framebuffer: WebGLFramebuffer | null = null
+  ) {
+    const fragShader = compileShader(gl, normalSource, gl.FRAGMENT_SHADER);
+    const vertShader = compileShader(
+      gl,
+      computeFlippedSource,
+      gl.VERTEX_SHADER
+    );
+    const localUniforms = ["u_latticeTexture"];
+    super(
+      gl,
+      fragShader,
+      vertShader,
+      localUniforms,
+      uniforms,
+      vao,
+      framebuffer
+    );
+  }
+
+  run(): void {
+    const gl = this.gl;
+
+    gl.useProgram(this.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindVertexArray(this.vao);
+    const locations = this.locations;
+    const uniforms = this.uniforms as SnowflakeUniformCollection;
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
+    gl.uniform1i(locations.u_latticeTexture, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+}
 export class DispProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
