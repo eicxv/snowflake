@@ -9,15 +9,56 @@ precision mediump float;
 uniform highp sampler2D u_latticeTexture;
 uniform float u_kappa;
 
-in vec2 v_cellCoord;
-in vec2 v_nb0Coord;
-in vec2 v_nb1Coord;
-in vec2 v_nb2Coord;
-in vec2 v_nb3Coord;
-in vec2 v_nb4Coord;
-in vec2 v_nb5Coord;
 out vec4 state;
 
+ivec2 adjustNbTopleft(ivec2 p) {
+    p.y = 2 * p.y > p.x ? p.x - p.y : p.y;
+    return p;
+}
+
+ivec2 adjustNbBottom(ivec2 p) {
+    p = p.y < 0 ? ivec2(p.x + 1, 1) : p;
+    return p;
+}
+
+ivec2 adjustNbRight(ivec2 p) {
+    ivec2 res = textureSize(u_latticeTexture, 0);
+     p = p.x >= res.x ? ivec2(p.x - 2, p.y - 1) : p;
+    return p;
+}
+
+vec4[6] neighbors(ivec2 p) {
+    // returns incorrect neighbors
+    // for p = (0, 0) however the
+    // origin is always frozen.
+
+    // neighbor order after visualization transform:
+    //   2   1
+    //  3  C  0
+    //   4   5
+    vec4[6] nbs;
+    ivec2 coord;
+
+    coord = adjustNbBottom(adjustNbRight(p + ivec2(1, 0)));
+    nbs[0] = texelFetch(u_latticeTexture, coord, 0);
+
+    coord = adjustNbTopleft(adjustNbRight(p + ivec2(1, 1)));
+    nbs[1] = texelFetch(u_latticeTexture, coord, 0);
+
+    coord = adjustNbTopleft(p + ivec2(0, 1));
+    nbs[2] = texelFetch(u_latticeTexture, coord, 0);
+
+    coord = adjustNbTopleft(p + ivec2(-1, 0));
+    nbs[3] = texelFetch(u_latticeTexture, coord, 0);
+
+    coord = adjustNbTopleft(adjustNbBottom(p + ivec2(-1, -1)));
+    nbs[4] = texelFetch(u_latticeTexture, coord, 0);
+
+    coord = adjustNbRight(adjustNbBottom(p + ivec2(0, -1)));
+    nbs[5] = texelFetch(u_latticeTexture, coord, 0);
+
+    return nbs;
+}
 
 vec4 diffusionFreezing(vec4 cell, vec4[6] nbs) {
     float d = cell.w;
@@ -26,26 +67,26 @@ vec4 diffusionFreezing(vec4 cell, vec4[6] nbs) {
         d += nbs[i].x > 0.5 ? cell.w : nbs[i].w;
         frozenNbs += nbs[i].x;
     }
-    d /= 7.0;
-    cell.w = d;
+    cell.w = d / 7.0;
 
-    float onBoundary = frozenNbs > 0.5 ? 1.0 : 0.0;
-    cell.y += onBoundary * (1.0 - u_kappa) * d;
-    cell.z += onBoundary * u_kappa * d;
-    cell.w -= onBoundary * cell.w;
+    if (frozenNbs > 0.5) {
+        cell.y += (1.0 - u_kappa) * cell.w;
+        cell.z += u_kappa * cell.w;
+        cell.w = 0.0;
+    }
     return cell;
 }
 
 void main() {
-    vec4 cell = texture(u_latticeTexture, v_cellCoord);
+    ivec2 cellCoord = ivec2(gl_FragCoord.xy);
+    vec4 cell = texelFetch(u_latticeTexture, cellCoord, 0);
+    vec4[6] nbs = neighbors(cellCoord);
 
-    vec4[6] nbs;
-    nbs[0] = texture(u_latticeTexture, v_nb0Coord);
-    nbs[1] = texture(u_latticeTexture, v_nb1Coord);
-    nbs[2] = texture(u_latticeTexture, v_nb2Coord);
-    nbs[3] = texture(u_latticeTexture, v_nb3Coord);
-    nbs[4] = texture(u_latticeTexture, v_nb4Coord);
-    nbs[5] = texture(u_latticeTexture, v_nb5Coord);
+    if (cell.x > 0.5) {
+        state = cell;
+        return;
+    }
 
-    state = diffusionFreezing(cell, nbs);
+    cell = diffusionFreezing(cell, nbs);
+    state = cell;
 }
