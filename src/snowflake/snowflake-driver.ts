@@ -8,7 +8,6 @@ import {
   getExtension,
 } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
-import { RenderProgram } from "./rendering/rendering-program";
 import {
   SnowflakeSimConfig,
   SnowflakeUniformCollection,
@@ -17,10 +16,8 @@ import {
 import {
   AttachmentProgram,
   DiffusionFreezingProgram,
-  DiffusionProgram,
   DispProgram,
   FillProgram,
-  FreezingProgram,
   MeltingProgram,
   NormalProgram,
   VisualizationProgram,
@@ -65,19 +62,13 @@ export class SnowflakeDriver extends AbstractDriver {
 
   private createPrograms(): Record<string, Program> {
     const programs = {
-      attachment: new AttachmentProgram(
-        this.gl,
-        this.uniforms,
-        this.computeVao,
-        null
-      ),
-      diffusion: new DiffusionProgram(
-        this.gl,
-        this.uniforms,
-        this.computeVao,
-        null
-      ),
       diffusionFreezing: new DiffusionFreezingProgram(
+        this.gl,
+        this.uniforms,
+        this.computeVao,
+        null
+      ),
+      attachment: new AttachmentProgram(
         this.gl,
         this.uniforms,
         this.computeVao,
@@ -89,19 +80,6 @@ export class SnowflakeDriver extends AbstractDriver {
         this.computeVao,
         null
       ),
-      freezing: new FreezingProgram(
-        this.gl,
-        this.uniforms,
-        this.computeVao,
-        null
-      ),
-      fill: new FillProgram(this.gl, this.uniforms, this.computeVao, null),
-      disp: new DispProgram(
-        this.gl,
-        this.uniforms,
-        this.visualizationVao,
-        null
-      ),
       visualization: new VisualizationProgram(
         this.gl,
         this.uniforms,
@@ -109,7 +87,13 @@ export class SnowflakeDriver extends AbstractDriver {
         null
       ),
       normal: new NormalProgram(this.gl, this.uniforms, this.computeVao, null),
-      render: new RenderProgram(this.gl, this.uniforms, this.computeVao, null),
+      fill: new FillProgram(this.gl, this.uniforms, this.computeVao, null),
+      disp: new DispProgram(
+        this.gl,
+        this.uniforms,
+        this.visualizationVao,
+        null
+      ),
     };
     return programs;
   }
