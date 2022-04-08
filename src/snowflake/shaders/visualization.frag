@@ -18,35 +18,32 @@ uniform float u_rho;
 in vec2 v_uv;
 out vec4 color;
 
-ivec3 symmetryTfm(ivec2 p) {
+ivec4 symmetryTfm(ivec2 p) {
     // transform hexagon coordinate to lower half of first sextant
-    // returns transformed x,y coordinate and sine cosine signs of sextants
-    bool c0 = p.y >= 0;   //        c1
-    bool c1 = p.y >= p.x; //    c2 | /
-    bool c2 = p.x <= 0;   //       |/   c0
-    bool c3 = p.y <= 0;   //    ---+---
-    bool c4 = p.x > p.y;  //  c3  /|
-    bool c5 = p.x >= 0;   //     / | c5
-                          //     c4
-    int a = c5 && !c1 ? 1 : (c2 && !c4 ? -1 : 0);
-    int b = c1 && !c3 ? 1 : (c4 && !c0 ? -1 : 0);
-    int c = c0 && !c2 ? 1 : (c3 && !c5 ? -1 : 0);
+    // returns transformed coordinates x,y; sextant index s and
+    // and whether the coordinate mirrored
+    int x = p.x;      //      c2   c1
+    int y = p.y;      //       | /
+    bool c0 = y < 0;  //       |/
+    bool c1 = y > x;  //    ---+--- c0
+    bool c2 = x < 0;  //      /|
+                      //     / |
+    int a = !c2 && !c1 ? 1 : (c2 && c1 ? -1 : 0);
+    int b = c1 && !c0 ? 1 : (!c1 && c0 ? -1 : 0);
+    int c = !c0 && !c2 ? 1 : (c0 && c2 ? -1 : 0);
 
-    p = ivec2(a * p.x + b * p.y, - b * p.x + c * p.y);
+    p = ivec2(a * x + b * y, - b * x + c * y);
     int flip = int(2 * p.y > p.x);
     p.y = flip == 1 ? p.x - p.y : p.y;
 
-    return ivec3(p, flip);
-}
+    int s = 0;
+    s += int(c0 || c1);
+    s += int(c0 || c2);
+    s += int(c0 || (c0 && c2));
+    s += int(c0 && !c1);
+    s += int(c0 && !c2);
 
-vec3 iceColor(vec4 cell) {
-    float c = 1.0 - 0.3 * (cell.z / u_rho);
-    return vec3(c);
-}
-
-vec3 vaporColor(vec4 cell) {
-    float c = 1.0 - 0.6 * cell.w / u_rho;
-    return vec3(c);
+    return ivec4(p, s, flip);
 }
 
 vec4 hexOffsetAndCenter(vec2 uv) {
@@ -57,17 +54,27 @@ vec4 hexOffsetAndCenter(vec2 uv) {
     return dot(o1, o1) < dot(o2, o2) ? vec4(o1, c1) : vec4(o2, c2);
 }
 
-vec3 rotateNormal(vec3 n, vec2 uv, int flipped) {
-        float angle = atan(uv.y, uv.x);
-    angle = floor(angle * 6. * INV_PI) * PI /6.;
-    
+vec3 rotateNormal(vec3 n, vec2 uv, int sextant, int flipped) {
     mat2 reflection = mat2(SQRT3_2, 0.5, 0.5, -SQRT3_2);
+    float angle = (float(sextant) * 2. + float(flipped)) * PI / 6.;
     float s = sin(angle);
     float c = cos(angle);
-    mat2 rotateNormal = mat2(c, s, -s,  c);
-    rotateNormal = flipped == 1 ? rotateNormal * reflection : rotateNormal;
-    n.xy = rotateNormal * n.xy;
+    mat2 rotation = mat2(c, s, -s,  c);
+    if (flipped == 1) {
+        n.xy = reflection * n.xy;
+    }
+    n.xy = rotation * n.xy;
     return n;
+}
+
+vec3 iceColor(vec4 cell) {
+    float c = 1.0 - 0.3 * (cell.z / u_rho);
+    return vec3(c);
+}
+
+vec3 vaporColor(vec4 cell) {
+    float c = 1.0 - 0.6 * cell.w / u_rho;
+    return vec3(c);
 }
 
 void main () {
@@ -81,21 +88,25 @@ void main () {
     mat2 tfm = mat2(1., 1., 0., 2.);
     hexCenter *= tfm;
 
-    ivec3 tfmData = symmetryTfm(ivec2(hexCenter));
+    ivec4 tfmData = symmetryTfm(ivec2(hexCenter));
     ivec2 coord = tfmData.xy;
-    int flipped = tfmData.z;
+    int sextant = tfmData.z;
+    int flip = tfmData.w;
 
     coord = res - coord - 1;
-    vec4 cell = texelFetch(u_latticeTexture, coord, 0);
 
+    vec4 cell = texelFetch(u_latticeTexture, coord, 0);
     vec3 n = cell.xyz;
 
-    n = rotateNormal(n, uv, flipped);
+    vec2 hexC = hex.zw;
+    mat2 hTfm = mat2(1., 0., 0., SQRT3);
+    hexC = hexC * hTfm;
+    n = rotateNormal(n, hexC, sextant, flip);
 
     n = n  * 0.5 + 0.5;
     color = vec4(n, 1. + 0. * u_rho);
 
     // bool isFrozen = cell.x > 0.5;
     // vec3 c = isFrozen ? iceColor(cell) : vaporColor(cell);
-    // color = vec4(c,1.0);
+    // color = vec4(c, 1.0);
 }
