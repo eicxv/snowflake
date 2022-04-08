@@ -10,36 +10,31 @@ uniform highp sampler2D u_latticeTexture;
 
 out vec4 state;
 
-ivec2 adjustNbBottom(ivec2 p) {
+ivec2 adjustNbTopleft(ivec2 p) {
     p.y = 2 * p.y > p.x ? p.x - p.y : p.y;
     return p;
 }
 
-ivec2 adjustNbTopleft(ivec2 p) {
+ivec2 adjustNbBottom(ivec2 p) {
     p = p.y < 0 ? ivec2(p.x + 1, 1) : p;
     return p;
 }
 
 ivec2 adjustNbRight(ivec2 p) {
     ivec2 res = textureSize(u_latticeTexture, 0);
-     p = p.x >= res.x ? ivec2(p.x - 2, p.y - 1) : p;
+    p = p.x >= res.x ? ivec2(p.x - 2, p.y - 1) : p;
     return p;
 }
 
-ivec2 tfmNeighborCoord(ivec2 p) {
-    p = adjustNbTopleft(p);
-    p = adjustNbRight(p);
-    p = adjustNbBottom(p);
-    p = adjustNbRight(p);
-
-    p = adjustNbTopleft(p);
+ivec2 adjustNbLeft(ivec2 p) {
+    ivec2 res = textureSize(u_latticeTexture, 0);
+    p = p.x < 0 ? ivec2(1, 0) : p;
     return p;
 }
 
 float[6] neighbors(ivec2 p) {
-    // returns incorrect neighbors
-    // for p = (0, 0) however the origin
-    // is always frozen.
+    // returns correct neighbors
+    // for p = (0, 0)
 
     // neighbor order after visualization transform:
     //   2   1
@@ -48,39 +43,26 @@ float[6] neighbors(ivec2 p) {
     float[6] nbs;
     ivec2 coord;
 
-    // coord = adjustNbBottom(adjustNbRight(p + ivec2(1, 0)));
-    coord = p + ivec2(1, 0);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbBottom(adjustNbRight(p + ivec2(1, 0)));
     nbs[0] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    // coord = adjustNbTopleft(adjustNbRight(p + ivec2(1, 1)));
-    coord = p + ivec2(1, 1);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbTopleft(adjustNbRight(p + ivec2(1, 1)));
     nbs[1] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    // coord = adjustNbTopleft(p + ivec2(0, 1));
-    coord = p + ivec2(0, 1);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbLeft(adjustNbTopleft(p + ivec2(0, 1)));
     nbs[2] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    // coord = adjustNbTopleft(p + ivec2(-1, 0));
-    coord = p + ivec2(-1, 0);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbLeft(adjustNbTopleft(p + ivec2(-1, 0)));
     nbs[3] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    // coord = adjustNbBottom(p + ivec2(-1, -1));
-    coord = p + ivec2(-1, -1);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbBottom(adjustNbLeft(p + ivec2(-1, -1)));
     nbs[4] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    // coord = adjustNbRight(adjustNbBottom(p + ivec2(0, -1)));
-    coord = p + ivec2(0, -1);
-    coord = tfmNeighborCoord(coord);
+    coord = adjustNbRight(adjustNbBottom(p + ivec2(0, -1)));
     nbs[5] = texelFetch(u_latticeTexture, coord, 0).z;
 
     return nbs;
 }
-
 
 vec3 normal(float nbs[6]) {
   vec2 grad = vec2(
