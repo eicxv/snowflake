@@ -28,7 +28,7 @@ ivec2 adjustNbRight(ivec2 p) {
 
 ivec2 adjustNbLeft(ivec2 p) {
     ivec2 res = textureSize(u_latticeTexture, 0);
-    p = p.x < 0 ? ivec2(1, 0) : p;
+    p = p.x <= 0 ? ivec2(1, 0) : p;
     return p;
 }
 
@@ -58,7 +58,7 @@ float[6] neighbors(ivec2 p) {
     coord = adjustNbBottom(adjustNbLeft(p + ivec2(-1, -1)));
     nbs[4] = texelFetch(u_latticeTexture, coord, 0).z;
 
-    coord = adjustNbRight(adjustNbBottom(p + ivec2(0, -1)));
+    coord = adjustNbTopleft(adjustNbRight(adjustNbBottom(p + ivec2(0, -1))));
     nbs[5] = texelFetch(u_latticeTexture, coord, 0).z;
 
     return nbs;
