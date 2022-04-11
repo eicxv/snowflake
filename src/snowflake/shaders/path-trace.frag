@@ -316,7 +316,9 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     if (tex.w < EPS) {
         return false;
     }
-    hitData.normal = tex.xyz;
+    vec3 normal = tex.xyz;
+    normal.z *= sign(pos.z);
+    hitData.normal = normal;
     hitData.material = iceMaterial;
     hitData.fromInside = isInside;
     hitData.dist = distance(rayPos, pos);
