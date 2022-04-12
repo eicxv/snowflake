@@ -6,6 +6,17 @@ import {
   VertexShader,
 } from "./program";
 
+export enum TextureWrap {
+  Repeat = "REPEAT",
+  ClampToEdge = "CLAMP_TO_EDGE",
+  MirroredRepeat = "MIRRORED_REPEAT",
+}
+
+export enum TextureFilter {
+  Linear = "LINEAR",
+  Nearest = "NEAREST",
+}
+
 export const defaultAttributeData = new Float32Array([
   -1.0, 1.0, 0.0, 1.0,
 
@@ -121,17 +132,19 @@ export function createTexture(
   width: number,
   height: number,
   format: number,
-  internalFormat: number
+  internalFormat: number,
+  wrap = TextureWrap.Repeat,
+  filter = TextureFilter.Nearest
 ): WebGLTexture {
   const texture = gl.createTexture();
   if (texture == null) {
     throw new Error("Failed to create texture");
   }
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[filter]);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[filter]);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[wrap]);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[wrap]);
   const target = gl.TEXTURE_2D;
   const level = 0;
   const border = 0;

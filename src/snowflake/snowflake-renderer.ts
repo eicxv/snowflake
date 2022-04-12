@@ -1,5 +1,6 @@
 import Camera from "../webgl/camera/camera";
 import { ComputeVariable } from "../webgl/compute-variable";
+import { TextureFilter, TextureWrap } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
 import {
   SnowflakeRenderUniforms,
@@ -72,7 +73,7 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
       u_viewMatrix: this.camera.viewMatrix,
       u_cameraPosition: this.camera.position,
       u_seed: 0,
-      u_blend: 0,
+      u_blend: 1,
     };
     return uniforms;
   }
@@ -80,7 +81,13 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
   private createVisVariables(): Record<string, ComputeVariable> {
     const variables = {
       render: this.createVariable(this.visConfig.resolution, null, 2),
-      normal: this.createVariable(this.visConfig.resolution, null, 1),
+      normal: this.createVariable(
+        this.visConfig.resolution,
+        null,
+        1,
+        TextureWrap.ClampToEdge,
+        TextureFilter.Linear
+      ),
     };
     return variables;
   }

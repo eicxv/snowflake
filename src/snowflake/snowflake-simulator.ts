@@ -3,6 +3,8 @@ import {
   createFramebuffer,
   createTexture,
   defaultAttributeData,
+  TextureFilter,
+  TextureWrap,
 } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
 import {
@@ -179,7 +181,9 @@ export class SnowflakeSimulator {
   protected createVariable(
     resolution: [number, number],
     initialData: Float32Array | null = null,
-    numberOfTextures: number = 2
+    numberOfTextures: number = 2,
+    wrap?: TextureWrap,
+    filter?: TextureFilter
   ): ComputeVariable {
     const gl = this.gl;
     const textureData: Array<Float32Array | null> = new Array(
@@ -187,7 +191,7 @@ export class SnowflakeSimulator {
     ).fill(null);
     textureData[0] = initialData;
     const textures = textureData.map((texData) =>
-      this.createTexture(resolution, texData)
+      this.createTexture(resolution, texData, wrap, filter)
     );
 
     const framebuffers = textures.map((texture) =>
@@ -203,20 +207,25 @@ export class SnowflakeSimulator {
 
   private createTexture(
     resolution: [number, number],
-    textureData: Float32Array | null = null
+    textureData: Float32Array | null = null,
+    wrap?: TextureWrap,
+    filter?: TextureFilter
   ): WebGLTexture {
     const gl = this.gl;
     const [width, height] = resolution;
     const internalFormat = gl.RGBA32F;
+    const type = gl.FLOAT;
     const format = gl.RGBA;
     return createTexture(
       gl,
-      gl.FLOAT,
+      type,
       textureData,
       width,
       height,
       format,
-      internalFormat
+      internalFormat,
+      wrap,
+      filter
     );
   }
 }

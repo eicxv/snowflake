@@ -23,6 +23,7 @@ export class SnowflakeDriver extends AbstractDriver {
     };
     super(canvas, glAttributes);
     getExtension(this.gl, "EXT_color_buffer_float");
+    getExtension(this.gl, "OES_texture_float_linear");
 
     this.controlConfig = controlConfig;
     this.snowflake = new SnowflakeRenderer(this.gl, simConfig, visConfig);
