@@ -270,7 +270,7 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     bool isInside = abs(pos.z) < tex.w;
     float stepLen;
     for (int i = 0; i < MARCH_ITER; i++) {
-        stepLen = (abs(pos.z) - tex.w) * 1.;
+        stepLen = abs(abs(pos.z) - tex.w);
         pos += dir * stepLen;
         tex = sampleLatticeInter(pos.xy);
         if (isInside != abs(pos.z) < tex.w) {
