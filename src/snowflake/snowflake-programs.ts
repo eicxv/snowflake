@@ -7,12 +7,51 @@ import diffusionFreezingSource from "./shaders/diffusion-freezing.frag?raw";
 import dispSource from "./shaders/disp.frag?raw";
 import displaySource from "./shaders/display.frag?raw";
 import fillSource from "./shaders/fill.frag?raw";
+import interpolateSource from "./shaders/interpolate.frag?raw";
 import meltingSource from "./shaders/melting.frag?raw";
 import normalSource from "./shaders/normal.frag?raw";
 import pathTraceSource from "./shaders/path-trace.frag?raw";
 import renderSource from "./shaders/render.vert?raw";
 import visualizationSource from "./shaders/visualization.frag?raw";
 import { SnowflakeUniformCollection } from "./snowflake-config";
+
+export class InterpolateProgram extends Program {
+  constructor(
+    gl: WebGL2RenderingContext,
+    uniforms: SnowflakeUniformCollection,
+    vao: WebGLVertexArrayObject,
+    framebuffer: WebGLFramebuffer | null = null
+  ) {
+    const fragShader = compileShader(gl, interpolateSource, gl.FRAGMENT_SHADER);
+    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
+    const localUniforms = ["u_latticeTexture"];
+    super(
+      gl,
+      fragShader,
+      vertShader,
+      localUniforms,
+      uniforms,
+      vao,
+      framebuffer
+    );
+  }
+
+  run(): void {
+    const gl = this.gl;
+
+    gl.useProgram(this.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindVertexArray(this.vao);
+    const locations = this.locations;
+    const uniforms = this.uniforms as SnowflakeUniformCollection;
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
+    gl.uniform1i(locations.u_latticeTexture, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+}
 
 export class DisplayProgram extends Program {
   constructor(
@@ -61,7 +100,7 @@ export class RenderProgram extends Program {
   ) {
     const fragShader = compileShader(gl, pathTraceSource, gl.FRAGMENT_SHADER);
     const vertShader = compileShader(gl, renderSource, gl.VERTEX_SHADER);
-    const localUniforms = ["u_latticeTexture", "u_renderTexture", "u_step"];
+    const localUniforms = ["u_renderTexture", "u_normalTexture", "u_step"];
     super(
       gl,
       fragShader,
@@ -91,6 +130,10 @@ export class RenderProgram extends Program {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_renderTexture);
     gl.uniform1i(locations.u_renderTexture, 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_normalTexture);
+    gl.uniform1i(locations.u_normalTexture, 2);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

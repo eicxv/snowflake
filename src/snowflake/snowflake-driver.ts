@@ -19,6 +19,7 @@ import {
   DisplayProgram,
   DispProgram,
   FillProgram,
+  InterpolateProgram,
   MeltingProgram,
   NormalProgram,
   RenderProgram,
@@ -28,7 +29,7 @@ import {
 export class SnowflakeDriver extends AbstractDriver {
   computeVao: WebGLVertexArrayObject;
   visualizationVao: WebGLVertexArrayObject;
-  variables: Record<"lattice" | "render", ComputeVariable>;
+  variables: Record<string, ComputeVariable>;
   simConfig: SnowflakeSimConfig;
   visConfig: SnowflakeVisConfig;
   uniforms: SnowflakeUniformCollection;
@@ -57,8 +58,9 @@ export class SnowflakeDriver extends AbstractDriver {
     this.computeVao = this.createComputeVao(this.createAttributeData());
     this.visualizationVao = this.createComputeVao(defaultAttributeData);
     this.variables = {
-      lattice: this.createVariable(this.simResolution, this.initialState()),
-      render: this.createVariable(this.visConfig.resolution),
+      lattice: this.createVariable(this.simResolution, this.initialState(), 2),
+      render: this.createVariable(this.visConfig.resolution, null, 2),
+      normal: this.createVariable(this.visConfig.resolution, null, 1),
     };
     this.uniforms = this.createUniforms();
     this.programs = this.createPrograms();
@@ -104,6 +106,12 @@ export class SnowflakeDriver extends AbstractDriver {
         null
       ),
       fill: new FillProgram(this.gl, this.uniforms, this.computeVao, null),
+      interpolate: new InterpolateProgram(
+        this.gl,
+        this.uniforms,
+        this.visualizationVao,
+        null
+      ),
       disp: new DispProgram(
         this.gl,
         this.uniforms,
@@ -127,6 +135,7 @@ export class SnowflakeDriver extends AbstractDriver {
       u_sigma: simConfig.sigma,
       u_latticeTexture: this.variables.lattice.getTexture(),
       u_renderTexture: this.variables.render.getTexture(),
+      u_normalTexture: this.variables.normal.getTexture(),
       u_step: this.steps,
       u_viewProjectionMatrix: this.camera.viewProjectionMatrix,
       u_viewMatrix: this.camera.viewMatrix,
@@ -229,6 +238,20 @@ export class SnowflakeDriver extends AbstractDriver {
     this.programs.render.run();
   }
 
+  interpolate(): void {
+    this.normal();
+    const [width, height] = this.visConfig.resolution;
+    this.gl.viewport(0, 0, width, height);
+    this.gl.canvas.width = width;
+    this.gl.canvas.height = height;
+
+    this.uniforms.u_latticeTexture = this.variables.lattice.getTexture(1);
+    this.programs.interpolate.framebuffer =
+      this.variables.normal.getFramebuffer();
+
+    this.programs.interpolate.run();
+  }
+
   display(): void {
     const [width, height] = this.visConfig.resolution;
     this.gl.viewport(0, 0, width, height);
@@ -240,15 +263,13 @@ export class SnowflakeDriver extends AbstractDriver {
   }
 
   disp(): void {
-    this.normal();
     const [width, height] = this.visConfig.resolution;
     this.gl.viewport(0, 0, width, height);
-    const variable = this.variables.lattice;
 
     this.gl.canvas.width = width;
     this.gl.canvas.height = height;
 
-    this.uniforms.u_latticeTexture = variable.getTexture(1);
+    this.uniforms.u_latticeTexture = this.variables.normal.texture;
     this.programs.disp.framebuffer = null;
     this.programs.disp.run();
   }
@@ -280,25 +301,37 @@ export class SnowflakeDriver extends AbstractDriver {
     return state;
   }
 
-  createVariable(
+  private createTexture(
     resolution: [number, number],
-    initialData: Float32Array | null = null
-  ): ComputeVariable {
+    textureData: Float32Array | null = null
+  ): WebGLTexture {
     const gl = this.gl;
     const [width, height] = resolution;
-    const textureData = [initialData, null];
     const internalFormat = gl.RGBA32F;
     const format = gl.RGBA;
+    return createTexture(
+      gl,
+      gl.FLOAT,
+      textureData,
+      width,
+      height,
+      format,
+      internalFormat
+    );
+  }
+
+  private createVariable(
+    resolution: [number, number],
+    initialData: Float32Array | null = null,
+    numberOfTextures: number = 2
+  ): ComputeVariable {
+    const gl = this.gl;
+    const textureData: Array<Float32Array | null> = new Array(
+      numberOfTextures
+    ).fill(null);
+    textureData[0] = initialData;
     const textures = textureData.map((texData) =>
-      createTexture(
-        gl,
-        gl.FLOAT,
-        texData,
-        width,
-        height,
-        format,
-        internalFormat
-      )
+      this.createTexture(resolution, texData)
     );
 
     const framebuffers = textures.map((texture) =>

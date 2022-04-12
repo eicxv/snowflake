@@ -31,6 +31,8 @@ export interface SnowflakeUniformCollection extends UniformCollection {
   u_rho: number;
   u_sigma: number;
   u_latticeTexture: WebGLTexture;
+  u_normalTexture: WebGLTexture;
+  u_renderTexture: WebGLTexture;
   u_step: number;
   u_viewProjectionMatrix: mat4;
   u_cameraPosition: vec3;

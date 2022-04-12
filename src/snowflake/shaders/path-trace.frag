@@ -13,10 +13,10 @@ precision mediump float;
 #define HEIGHT 2. // lattice max height
 
 #define SEARCH_ITER 4 // max binary search iterations
-#define MARCH_ITER 6 // max ray march iterations
+#define MARCH_ITER 16 // max ray march iterations
 
-uniform highp sampler2D u_latticeTexture;
 uniform highp sampler2D u_renderTexture;
+uniform highp sampler2D u_normalTexture;
 uniform uint u_step;
 
 out vec4 fragColor;
@@ -29,10 +29,10 @@ const float c_rayPosNudge = 0.01;
 const float c_far = 10000.0;
 
 // camera FOV
-const float c_FOVDeg = 178.3;
+const float c_FOVDeg = 178.1;
 
 // number of ray bounces allowed max
-const int c_maxBounces = 8;
+const int c_maxBounces = 12;
 
 // how many renders per frame - make this larger to get around the vsync limitation, and get a better image faster.
 const int c_samplesPerFrame = 8;
@@ -57,18 +57,19 @@ struct HitData {
 };
 
 #define DEBUG 0
+// #define LIGHT
 
 #if DEBUG == 0
 const Material iceMaterial = Material(
     vec3(0.2, 0.2, 0.3),            // albedo
     vec3(0.0, 0.0, 0.0),            // emissive
-    0.08,                           // specularChance
+    0.01,                           // specularChance
     0.01,                           // specularRoughness
     vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
     1.309,                          // IOR
-    0.92,                           // refractionChance
-    0.0,                            // refractionRoughness
-    vec3(0.1, 0.02, 0.02)           // refractionColor
+    1.,                           // refractionChance
+    0.0000000001,                            // refractionRoughness
+    vec3(0.14, 0.04, 0.04)           // refractionColor
 );
 #else
 const Material iceMaterial = Material(
@@ -84,103 +85,43 @@ const Material iceMaterial = Material(
 );
 #endif
 
-ivec4 symmetryTfm(ivec2 p) {
-    // transform hexagon coordinate to lower half of first sextant
-    // returns transformed coordinates x,y; sextant index s and
-    // and whether the coordinate mirrored
-    int x = p.x;      //      c2   c1
-    int y = p.y;      //       | /
-    bool c0 = y < 0;  //       |/
-    bool c1 = y > x;  //    ---+--- c0
-    bool c2 = x < 0;  //      /|
-                      //     / |
-    int a = !c2 && !c1 ? 1 : (c2 && c1 ? -1 : 0);
-    int b = c1 && !c0 ? 1 : (!c1 && c0 ? -1 : 0);
-    int c = !c0 && !c2 ? 1 : (c0 && c2 ? -1 : 0);
-
-    p = ivec2(a * x + b * y, - b * x + c * y);
-    int flip = int(2 * p.y > p.x);
-    p.y = flip == 1 ? p.x - p.y : p.y;
-
-    int s = 0;
-    s += int(c0 || c1);
-    s += int(c0 || c2);
-    s += int(c0);
-    s += int(c0 && !c1);
-    s += int(c0 && !c2);
-
-    return ivec4(p, s, flip);
-}
-
-vec3 rotateNormal(vec3 n, int sextant, int flipped) {
-    mat2 reflection = mat2(sqrt(3.) / 2., 0.5, 0.5, -sqrt(3.) / 2.);
-    float angle = (float(sextant) * 2. + float(flipped)) * PI / 6.;
-    float s = sin(angle);
-    float c = cos(angle);
-    mat2 rotation = mat2(c, s, -s,  c);
-    if (flipped == 1) {
-        n.xy = reflection * n.xy;
-    }
-    n.xy = rotation * n.xy;
-    return n;
-}
-
-vec4 hexOffsetAndCenter(vec2 uv) {
-    vec2 c1 = round(uv * vec2(1., 1. / sqrt(3.)));
-    c1 *= vec2(1., sqrt(3.));
-    vec2 o1 = uv - c1;
-    vec2 c2 = c1 + sign(o1) * vec2(0.5, sqrt(3.) / 2.);
-    vec2 o2 = uv - c2;
-    vec4 o = dot(o1, o1) < dot(o2, o2) ? vec4(o1, c1) : vec4(o2, c2);
-    return o;
-}
-
-ivec2 normalMapCoord(ivec2 coord, ivec2 res) {
-    return res - coord - 1;
-}
-
-vec2 hexCenter(vec2 uv, ivec2 res) {
-    uv *= float(res.x);
-    vec2 hex = hexOffsetAndCenter(uv).zw;
-
-    // transforms hexagon centers to cartesian integer coordiantes
-    hex *= mat2(1., 1./sqrt(3.), 0., 2./sqrt(3.));
-    return hex;
-}
-
-vec4 sampleLattice(vec2 uv) {
-    ivec2 res = textureSize(u_latticeTexture, 0);
-
-    vec2 hex = hexCenter(uv, res);
-    ivec4 tfmData = symmetryTfm(ivec2(round(hex)));
-    ivec2 coord = tfmData.xy;
-
-    coord = normalMapCoord(coord, res);
-    vec4 cell = texelFetch(u_latticeTexture, coord, 0);
-
-    int sextant = tfmData.z;
-    int flip = tfmData.w;
-
-    vec3 n = rotateNormal(cell.xyz, sextant, flip);
-    return vec4(n, cell.w);
+vec4 sampleLatticeInter(vec2 uv) {
+    uv = (uv + 0.5);
+    return texture(u_normalTexture, uv);
 }
 
 vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
     return a + b * cos(TAU * (c * t + d));
 }
 
-vec3 environment(vec3 n) {
+#ifdef LIGHT
+#define GROUND vec3(0.05, 0.08, 0.26) * 2.5
+#define SKY vec3(0.03)
+#define MID vec3(0.03)
+#define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
+#else
+#define GROUND vec3(0.01, 0.03, 0.05)
+#define MID vec3(0.01, 0.03, 0.05)
+#define SKY vec3(0.1, 0.3, 0.5)
+#define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
+#endif
+#define ANGLE_OFFSET 0.3241
+#define COLOR_1 vec3(1., 0.718, 0.012) * 6.
+#define COLOR_2 vec3(0.071, 0.404, 0.51) * 3.
+#define COLOR_3 vec3(0.788, 0.094, 0.29) * 3.
+
+vec3 environmentAlt(vec3 n) {
     #if DEBUG == 1
     return vec3(0.);
     #else
     vec3 col;
-    vec3 ground = vec3(0.05, 0.08, 0.26) * 2.5;
-    vec3 sky = vec3(0.03);
+    vec3 ground = GROUND;
+    vec3 sky = SKY;
     float skyGroundBlend = smoothstep(-0.99, -0.95, n.z);
     col = mix(ground, sky, skyGroundBlend);
 
     float angle = atan(n.y, n.x) / TAU + 0.1357;
-    vec3 rakeLight = pal(angle, vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25));
+    vec3 rakeLight = pal(angle, PALETTE);
 
     rakeLight *= 4.;
     rakeLight *= sin(3. * angle * PI) + 1.;
@@ -193,6 +134,31 @@ vec3 environment(vec3 n) {
     col = max(col, rakeLight);
     return col;
     #endif
+}
+
+vec3 light(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
+    float blend = smoothstep(a1, a2, dot(rayDir, lightDir));
+    return color * blend;
+}
+
+vec3 environment(vec3 rayDir) {
+    vec3 col;
+    vec3 ground = GROUND;
+    vec3 mid = MID;
+    vec3 sky = SKY;
+    float midGroundBlend = smoothstep(-0.99, -0.95, rayDir.z);
+    float skyMidBlend = smoothstep(-0.2, 0.2, rayDir.z);
+    col = mix(ground, mid, midGroundBlend);
+    col = mix(col, sky, skyMidBlend);
+
+    vec3 lightDir;
+    lightDir = vec3(cos(ANGLE_OFFSET), sin(ANGLE_OFFSET), 0);
+    col += light(rayDir, COLOR_1, lightDir, 0.8, 0.9);
+    lightDir = vec3(cos(TAU / 3. + ANGLE_OFFSET), sin(TAU / 3. + ANGLE_OFFSET), 0);
+    col += light(rayDir, COLOR_2, lightDir, 0.8, 0.9);
+    lightDir = vec3(cos(2. * TAU / 3. + ANGLE_OFFSET), sin(2. * TAU / 3. + ANGLE_OFFSET), 0);
+    col += light(rayDir, COLOR_3, lightDir, 0.8, 0.9);
+    return col;
 }
 
 vec3 lessThan_(vec3 f, float value) {
@@ -277,7 +243,7 @@ vec3 binarySearchMarch(vec3 p0, vec3 p1, bool inside, out vec4 tex) {
     // assumes either p0 or p1 is inside height map
     vec3 p = mix(p0, p1, 0.5);
     for (int i = 0; i < SEARCH_ITER; i++) {
-        tex = sampleLattice(p.xy);
+        tex = sampleLatticeInter(p.xy);
         if (inside ^^ (abs(p.z) > tex.w)) {
             p0 = p;
         } else {
@@ -285,7 +251,7 @@ vec3 binarySearchMarch(vec3 p0, vec3 p1, bool inside, out vec4 tex) {
         }
         p = mix(p0, p1, 0.5);
     }
-    tex = sampleLattice(p.xy);
+    tex = sampleLatticeInter(p.xy);
     return p;
 }
 
@@ -299,19 +265,19 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
             return false;
         }
     }
-    vec4 tex = sampleLattice(pos.xy);
+    vec4 tex = sampleLatticeInter(pos.xy);
     bool isInside = abs(pos.z) < tex.w;
     float stepLen;
     for (int i = 0; i < MARCH_ITER; i++) {
         stepLen = (abs(pos.z) - tex.w) * 1.;
         pos += dir * stepLen;
-        tex = sampleLattice(pos.xy);
+        tex = sampleLatticeInter(pos.xy);
         if (isInside != abs(pos.z) < tex.w) {
             pos = binarySearchMarch(pos - dir * stepLen, pos, isInside, tex);
             break;
         }
     }
-    tex = sampleLattice(pos.xy);
+    tex = sampleLatticeInter(pos.xy);
 
     if (tex.w < EPS) {
         return false;
@@ -336,7 +302,7 @@ void hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     #else
     vec3 pos;
     hitZPlane(rayPos, rayDir, HEIGHT, pos);
-    vec4 tex = sampleLattice(pos.xy);
+    vec4 tex = sampleLatticeInter(pos.xy);
     hitData.dist = 1.;
     hitData.material =  Material(
         vec3(0.1, 0.1, 0.1),    // albedo
@@ -445,9 +411,9 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
 }
 
 void getCameraVectors(out vec3 cameraPos, out vec3 cameraFwd, out vec3 cameraUp, out vec3 cameraRight) {
-    cameraPos = vec3(0.0, 0.0, 30.0);
+    cameraPos = vec3(0.01, 0.01, 30.0);
     cameraFwd = vec3(0.0, 0.0, -1.0);
-    cameraRight = vec3(0.0, 1.0, 0.0);
+    cameraRight = normalize(vec3(1.0, 0.02, 0.0));
     cameraUp = normalize(cross(cameraFwd, cameraRight));
 }
 
