@@ -1,5 +1,6 @@
 import {
   fernlikeSimConfig,
+  SnowflakeControlConfig,
   SnowflakeVisConfig,
 } from "./snowflake/snowflake-config";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
@@ -19,22 +20,25 @@ const visConfig: SnowflakeVisConfig = {
   cameraSettings,
 };
 
+const controlConfig: SnowflakeControlConfig = {
+  growSteps: 3000,
+  growStepPerCycle: 5,
+  renderStepsPerCycle: 50,
+  renderBlendReset: 0,
+};
+
 const simConfig = fernlikeSimConfig;
 
 function main(): void {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-  const driver = new SnowflakeDriver(canvas, simConfig, visConfig);
+  const driver = new SnowflakeDriver(
+    canvas,
+    controlConfig,
+    simConfig,
+    visConfig
+  );
 
-  const [width, height] = visConfig.resolution;
-  const gl = driver.gl;
-  gl.canvas.width = width;
-  gl.canvas.height = height;
-
-  const sf = driver.snowflake;
-  sf.grow(3000);
-  sf.interpolate();
-  sf.pathTrace(100);
-  sf.display();
+  driver.startAnimation();
 }
 
 main();

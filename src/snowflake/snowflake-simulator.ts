@@ -21,7 +21,7 @@ export class SnowflakeSimulator {
   simConfig: SnowflakeSimConfig;
   uniforms: SnowflakeSimulationUniforms;
   internalSteps = 1;
-  stepCount = 0;
+  growCount = 0;
   programs: Record<string, Program>;
   vaos: Record<string, WebGLVertexArrayObject>;
   constructor(gl: WebGL2RenderingContext, simConfig: SnowflakeSimConfig) {
@@ -68,7 +68,6 @@ export class SnowflakeSimulator {
       u_rho: simConfig.rho,
       u_sigma: simConfig.sigma,
       u_latticeTexture: this.variables.lattice.getTexture(),
-      u_step: this.stepCount,
     };
     return uniforms;
   }
@@ -95,6 +94,7 @@ export class SnowflakeSimulator {
     const [width, height] = this.variables.lattice.resolution;
     this.gl.viewport(0, 0, width, height);
     const variable = this.variables.lattice;
+    this.growCount += cycles;
 
     for (let _ = 0; _ < cycles; _++) {
       this.uniforms.u_latticeTexture = variable.getTexture();
@@ -111,9 +111,6 @@ export class SnowflakeSimulator {
       variable.advance();
       this.programs.melting.framebuffer = variable.getFramebuffer();
       this.programs.melting.run();
-
-      this.stepCount += 1;
-      this.uniforms.u_step = this.stepCount;
     }
   }
 

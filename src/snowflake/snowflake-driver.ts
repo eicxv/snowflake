@@ -1,6 +1,7 @@
 import { AbstractDriver } from "../webgl/driver";
 import { getExtension } from "../webgl/gl-utility";
 import {
+  SnowflakeControlConfig,
   SnowflakeSimConfig,
   SnowflakeUniforms,
   SnowflakeVisConfig,
@@ -10,8 +11,10 @@ import { SnowflakeRenderer } from "./snowflake-renderer";
 export class SnowflakeDriver extends AbstractDriver {
   uniforms: SnowflakeUniforms;
   snowflake: SnowflakeRenderer;
+  controlConfig: SnowflakeControlConfig;
   constructor(
     canvas: HTMLCanvasElement,
+    controlConfig: SnowflakeControlConfig,
     simConfig: SnowflakeSimConfig,
     visConfig: SnowflakeVisConfig
   ) {
@@ -21,16 +24,30 @@ export class SnowflakeDriver extends AbstractDriver {
     super(canvas, glAttributes);
     getExtension(this.gl, "EXT_color_buffer_float");
 
+    this.controlConfig = controlConfig;
     this.snowflake = new SnowflakeRenderer(this.gl, simConfig, visConfig);
     this.uniforms = this.snowflake.uniforms;
+
+    this.animate = this.animate.bind(this);
   }
 
   animate(): void {
-    throw new Error("Method not implemented.");
+    this.step();
+    this.animateId = requestAnimationFrame(this.animate);
   }
 
   step(): void {
-    throw new Error("Method not implemented.");
+    const sf = this.snowflake;
+    const cConfig = this.controlConfig;
+    sf.pathTrace(cConfig.growStepPerCycle);
+    if (sf.growCount < cConfig.growSteps) {
+      sf.grow(cConfig.growStepPerCycle);
+      sf.interpolate();
+      if (cConfig.renderBlendReset != null) {
+        sf.renderStep = cConfig.renderBlendReset;
+      }
+    }
+    sf.display();
   }
 
   dumpTexture(): Float32Array {

@@ -2,6 +2,13 @@ import { mat4, vec3 } from "gl-matrix";
 import { CameraSettings } from "../webgl/camera/camera";
 import { Uniforms } from "../webgl/program";
 
+export interface SnowflakeControlConfig {
+  growSteps: number;
+  growStepPerCycle: number;
+  renderStepsPerCycle: number;
+  renderBlendReset: number | null;
+}
+
 export interface SnowflakeVisConfig {
   resolution: [number, number];
   cameraSettings: CameraSettings;
