@@ -35,7 +35,7 @@ ivec4 symmetryTfm(ivec2 p) {
     int s = 0;
     s += int(c0 || c1);
     s += int(c0 || c2);
-    s += int(c0 || (c0 && c2));
+    s += int(c0);
     s += int(c0 && !c1);
     s += int(c0 && !c2);
 
@@ -52,19 +52,6 @@ vec4 hexOffsetAndCenter(vec2 uv) {
     return o;
 }
 
-vec3 rotateNormal(vec3 n, int sextant, int flipped) {
-    mat2 reflection = mat2(sqrt(3.) / 2., 0.5, 0.5, -sqrt(3.) / 2.);
-    float angle = (float(sextant) * 2. + float(flipped)) * PI / 6.;
-    float s = sin(angle);
-    float c = cos(angle);
-    mat2 rotation = mat2(c, s, -s,  c);
-    if (flipped == 1) {
-        n.xy = reflection * n.xy;
-    }
-    n.xy = rotation * n.xy;
-    return n;
-}
-
 vec3 iceColor(vec4 cell) {
     float c = 1.0 - 0.3 * (cell.z / u_rho);
     return vec3(c);
@@ -73,10 +60,6 @@ vec3 iceColor(vec4 cell) {
 vec3 vaporColor(vec4 cell) {
     float c = 1.0 - 0.6 * cell.w / u_rho;
     return vec3(c);
-}
-
-ivec2 normalMapCoord(ivec2 coord, ivec2 res) {
-    return res - coord - 1;
 }
 
 vec2 hexCenter(vec2 uv, ivec2 res) {
@@ -88,8 +71,6 @@ vec2 hexCenter(vec2 uv, ivec2 res) {
     return hexCenter;
 }
 
-#define NORMAL_MAP
-
 void main () {
     ivec2 res = textureSize(u_latticeTexture, 0);
 
@@ -97,22 +78,11 @@ void main () {
     ivec4 tfmData = symmetryTfm(ivec2(round(hex)));
     ivec2 coord = tfmData.xy;
 
-#ifdef NORMAL_MAP
-    coord = normalMapCoord(coord, res);
-    vec4 cell = texelFetch(u_latticeTexture, coord, 0);
 
-    int sextant = tfmData.z;
-    int flip = tfmData.w;
-
-    vec3 n = rotateNormal(cell.xyz, sextant, flip);
-    n = n  * 0.5 + 0.5;
-    color = vec4(n, 1. + 0. * u_rho);
-#else
     vec4 cell = texelFetch(u_latticeTexture, coord, 0);
 
     bool isFrozen = cell.x > 0.5;
     vec3 c = isFrozen ? iceColor(cell) : vaporColor(cell);
 
     color = vec4(c, 1.0);
-#endif
 }

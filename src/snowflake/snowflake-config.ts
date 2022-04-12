@@ -1,11 +1,10 @@
 import { mat4, vec3 } from "gl-matrix";
 import { CameraSettings } from "../webgl/camera/camera";
-import { UniformCollection } from "../webgl/program";
+import { Uniforms } from "../webgl/program";
 
 export interface SnowflakeVisConfig {
   resolution: [number, number];
   cameraSettings: CameraSettings;
-  internalSteps: number;
 }
 
 export interface SnowflakeSimConfig {
@@ -21,7 +20,7 @@ export interface SnowflakeSimConfig {
   steps: number; // number of simulation iterations
 }
 
-export interface SnowflakeUniformCollection extends UniformCollection {
+export interface SnowflakeSimulationUniforms extends Uniforms {
   u_alpha: number;
   u_beta: number;
   u_theta: number;
@@ -31,12 +30,20 @@ export interface SnowflakeUniformCollection extends UniformCollection {
   u_rho: number;
   u_sigma: number;
   u_latticeTexture: WebGLTexture;
+}
+
+export interface SnowflakeRenderUniforms extends Uniforms {
   u_normalTexture: WebGLTexture;
   u_renderTexture: WebGLTexture;
-  u_step: number;
+  u_blend: number;
+  u_seed: number;
   u_viewProjectionMatrix: mat4;
   u_cameraPosition: vec3;
 }
+
+export interface SnowflakeUniforms
+  extends SnowflakeSimulationUniforms,
+    SnowflakeRenderUniforms {}
 
 export const simConfig1: SnowflakeSimConfig = {
   alpha: 0.6,

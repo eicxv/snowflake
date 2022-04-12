@@ -1,24 +1,24 @@
 import { compileShader } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
-import attachmentSource from "./shaders/attachment.frag?raw";
-import computeFlippedSource from "./shaders/compute-flipped.vert?raw";
-import computeSource from "./shaders/compute.vert?raw";
-import diffusionFreezingSource from "./shaders/diffusion-freezing.frag?raw";
-import dispSource from "./shaders/disp.frag?raw";
-import displaySource from "./shaders/display.frag?raw";
-import fillSource from "./shaders/fill.frag?raw";
-import interpolateSource from "./shaders/interpolate.frag?raw";
-import meltingSource from "./shaders/melting.frag?raw";
-import normalSource from "./shaders/normal.frag?raw";
-import pathTraceSource from "./shaders/path-trace.frag?raw";
-import renderSource from "./shaders/render.vert?raw";
-import visualizationSource from "./shaders/visualization.frag?raw";
-import { SnowflakeUniformCollection } from "./snowflake-config";
+import computeFlippedSource from "./shaders/common/compute-flipped.vert?raw";
+import computeSource from "./shaders/common/compute.vert?raw";
+import dispSource from "./shaders/common/disp.frag?raw";
+import fillSource from "./shaders/common/fill.frag?raw";
+import displaySource from "./shaders/render/display.frag?raw";
+import interpolateSource from "./shaders/render/interpolate.frag?raw";
+import normalSource from "./shaders/render/normal.frag?raw";
+import pathTraceSource from "./shaders/render/path-trace.frag?raw";
+import renderSource from "./shaders/render/render.vert?raw";
+import visualizationSource from "./shaders/render/visualization.frag?raw";
+import {
+  SnowflakeSimulationUniforms,
+  SnowflakeUniforms,
+} from "./snowflake-config";
 
 export class InterpolateProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -43,7 +43,7 @@ export class InterpolateProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
@@ -56,7 +56,7 @@ export class InterpolateProgram extends Program {
 export class DisplayProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -81,7 +81,7 @@ export class DisplayProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_renderTexture);
@@ -91,16 +91,21 @@ export class DisplayProgram extends Program {
   }
 }
 
-export class RenderProgram extends Program {
+export class PathTraceProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
     const fragShader = compileShader(gl, pathTraceSource, gl.FRAGMENT_SHADER);
     const vertShader = compileShader(gl, renderSource, gl.VERTEX_SHADER);
-    const localUniforms = ["u_renderTexture", "u_normalTexture", "u_step"];
+    const localUniforms = [
+      "u_renderTexture",
+      "u_normalTexture",
+      "u_blend",
+      "u_seed",
+    ];
     super(
       gl,
       fragShader,
@@ -119,9 +124,10 @@ export class RenderProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
-    gl.uniform1ui(locations.u_step, uniforms.u_step);
+    gl.uniform1ui(locations.u_seed, uniforms.u_seed);
+    gl.uniform1f(locations.u_blend, uniforms.u_blend);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
@@ -142,7 +148,7 @@ export class RenderProgram extends Program {
 export class NormalProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -171,7 +177,7 @@ export class NormalProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
@@ -184,7 +190,7 @@ export class NormalProgram extends Program {
 export class DispProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -209,7 +215,7 @@ export class DispProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
@@ -222,7 +228,7 @@ export class DispProgram extends Program {
 export class FillProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -248,136 +254,9 @@ export class FillProgram extends Program {
     gl.bindVertexArray(this.vao);
 
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeUniforms;
 
     gl.uniform1f(locations.u_rho, uniforms.u_rho);
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
-    gl.uniform1i(locations.u_latticeTexture, 0);
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
-  }
-}
-
-export class DiffusionFreezingProgram extends Program {
-  constructor(
-    gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
-    vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
-  ) {
-    const fragShader = compileShader(
-      gl,
-      diffusionFreezingSource,
-      gl.FRAGMENT_SHADER
-    );
-    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
-    const localUniforms = ["u_latticeTexture", "u_kappa"];
-    super(
-      gl,
-      fragShader,
-      vertShader,
-      localUniforms,
-      uniforms,
-      vao,
-      framebuffer
-    );
-  }
-
-  run(): void {
-    const gl = this.gl;
-
-    gl.useProgram(this.program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    gl.bindVertexArray(this.vao);
-    const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
-
-    gl.uniform1f(locations.u_kappa, uniforms.u_kappa);
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
-    gl.uniform1i(locations.u_latticeTexture, 0);
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
-  }
-}
-
-export class AttachmentProgram extends Program {
-  constructor(
-    gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
-    vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
-  ) {
-    const fragShader = compileShader(gl, attachmentSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
-    const localUniforms = ["u_latticeTexture", "u_alpha", "u_beta", "u_theta"];
-    super(
-      gl,
-      fragShader,
-      vertShader,
-      localUniforms,
-      uniforms,
-      vao,
-      framebuffer
-    );
-  }
-
-  run(): void {
-    const gl = this.gl;
-
-    gl.useProgram(this.program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    gl.bindVertexArray(this.vao);
-    const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
-
-    gl.uniform1f(locations.u_alpha, uniforms.u_alpha);
-    gl.uniform1f(locations.u_beta, uniforms.u_beta);
-    gl.uniform1f(locations.u_theta, uniforms.u_theta);
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
-    gl.uniform1i(locations.u_latticeTexture, 0);
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
-  }
-}
-
-export class MeltingProgram extends Program {
-  constructor(
-    gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
-    vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
-  ) {
-    const fragShader = compileShader(gl, meltingSource, gl.FRAGMENT_SHADER);
-    const vertShader = compileShader(gl, computeSource, gl.VERTEX_SHADER);
-    const localUniforms = ["u_latticeTexture", "u_mu", "u_gamma"];
-    super(
-      gl,
-      fragShader,
-      vertShader,
-      localUniforms,
-      uniforms,
-      vao,
-      framebuffer
-    );
-  }
-
-  run(): void {
-    const gl = this.gl;
-
-    gl.useProgram(this.program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-    gl.bindVertexArray(this.vao);
-    const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
-
-    gl.uniform1f(locations.u_mu, uniforms.u_mu);
-    gl.uniform1f(locations.u_gamma, uniforms.u_gamma);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
@@ -390,7 +269,7 @@ export class MeltingProgram extends Program {
 export class VisualizationProgram extends Program {
   constructor(
     gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniformCollection,
+    uniforms: SnowflakeSimulationUniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
@@ -419,7 +298,7 @@ export class VisualizationProgram extends Program {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     gl.bindVertexArray(this.vao);
     const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniformCollection;
+    const uniforms = this.uniforms as SnowflakeSimulationUniforms;
 
     gl.uniform1f(locations.u_rho, uniforms.u_rho);
 

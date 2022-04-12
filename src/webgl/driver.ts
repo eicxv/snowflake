@@ -1,4 +1,4 @@
-import { UniformCollection } from "./program";
+import { Uniforms } from "./program";
 
 export interface Driver {
   gl: WebGL2RenderingContext;
@@ -11,7 +11,7 @@ export interface Driver {
 export abstract class AbstractDriver implements Driver {
   gl: WebGL2RenderingContext;
   steps = 0;
-  abstract uniforms: UniformCollection;
+  abstract uniforms: Uniforms;
   protected animateId: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, glAttributes: WebGLContextAttributes) {

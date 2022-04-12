@@ -17,7 +17,8 @@ precision mediump float;
 
 uniform highp sampler2D u_renderTexture;
 uniform highp sampler2D u_normalTexture;
-uniform uint u_step;
+uniform uint u_seed;
+uniform float u_blend;
 
 out vec4 fragColor;
 
@@ -420,7 +421,7 @@ void getCameraVectors(out vec3 cameraPos, out vec3 cameraFwd, out vec3 cameraUp,
 void main() {
     ivec2 res = textureSize(u_renderTexture, 0);
     vec2 fragCoord = vec2(gl_FragCoord);
-    uint rngState = uint(uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277) + uint(u_step) * uint(26699)) | uint(1);
+    uint rngState = uint(uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277) + uint(u_seed) * uint(26699)) | uint(1);
 
     // calculate subpixel camera jitter for anti aliasing
     vec2 jitter = vec2(randomFloat01(rngState), randomFloat01(rngState)) - 0.5;
@@ -444,9 +445,8 @@ void main() {
     	color += traceRay(cameraPos, rayDir, rngState) / float(c_samplesPerFrame);
     }
 
-    float blend = 1.0 / float(u_step + 1u);
     vec3 prevColor = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0).xyz;
-    color = mix(prevColor, color, blend);
+    color = mix(prevColor, color, u_blend);
 
-    fragColor = vec4(color, blend);
+    fragColor = vec4(color, u_blend);
 }

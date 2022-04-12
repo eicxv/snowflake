@@ -9,16 +9,13 @@ export interface LocationCollection {
   [locationName: string]: WebGLUniformLocation;
 }
 
-export type UniformCollection = Record<
-  string,
-  number | number[] | WebGLTexture
->;
+export type Uniforms = Record<string, number | number[] | WebGLTexture>;
 
 export abstract class Program {
   gl: WebGL2RenderingContext;
   program: WebGLProgram;
   framebuffer: WebGLFramebuffer | null;
-  uniforms: UniformCollection;
+  uniforms: Uniforms;
   locations: LocationCollection;
   vao: WebGLVertexArrayObject;
   constructor(
@@ -26,7 +23,7 @@ export abstract class Program {
     fragShader: FragmentShader,
     vertShader: VertexShader,
     localUniforms: string[],
-    uniforms: UniformCollection,
+    uniforms: Uniforms,
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {

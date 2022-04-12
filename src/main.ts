@@ -15,9 +15,8 @@ const cameraSettings: CameraSettings = {
 };
 
 const visConfig: SnowflakeVisConfig = {
-  resolution: [2001, 2001],
+  resolution: [300, 300],
   cameraSettings,
-  internalSteps: 10,
 };
 
 const simConfig = fernlikeSimConfig;
@@ -26,7 +25,16 @@ function main(): void {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
   const driver = new SnowflakeDriver(canvas, simConfig, visConfig);
 
-  driver.startAnimation();
+  const [width, height] = visConfig.resolution;
+  const gl = driver.gl;
+  gl.canvas.width = width;
+  gl.canvas.height = height;
+
+  const sf = driver.snowflake;
+  sf.grow(3000);
+  sf.interpolate();
+  sf.pathTrace(100);
+  sf.display();
 }
 
 main();
