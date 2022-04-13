@@ -10,6 +10,8 @@ uniform highp sampler2D u_latticeTexture;
 
 out vec4 state;
 
+#define Z_SCALE 0.05
+
 ivec2 adjustNbTopleft(ivec2 p) {
     p.y = 2 * p.y > p.x ? p.x - p.y : p.y;
     return p;
@@ -66,17 +68,17 @@ vec4[6] neighbors(ivec2 p) {
 
 vec3 normal(vec4[6] nbs) {
   vec2 grad = vec2(
-    ( 2.0 * nbs[0].z
-    +       nbs[1].z
-    -       nbs[2].z
-    - 2.0 * nbs[3].z
-    -       nbs[4].z
-    +       nbs[5].z) / 6.0,
+    ( 2.0 * nbs[0].z * Z_SCALE
+    +       nbs[1].z * Z_SCALE
+    -       nbs[2].z * Z_SCALE
+    - 2.0 * nbs[3].z * Z_SCALE
+    -       nbs[4].z * Z_SCALE
+    +       nbs[5].z * Z_SCALE) / 6.0,
 
-    ( nbs[1].z
-    + nbs[2].z
-    - nbs[4].z
-    - nbs[5].z) / (2.0 * sqrt(3.0))
+    ( nbs[1].z * Z_SCALE
+    + nbs[2].z * Z_SCALE
+    - nbs[4].z * Z_SCALE
+    - nbs[5].z * Z_SCALE) / (2.0 * sqrt(3.0))
   );
   return normalize(vec3(-grad, 1.0));
 }
@@ -123,7 +125,7 @@ void main() {
 
     #ifdef NO_NORMAL_ON_BOUNDARY
     if (cell.x < 0.5) {
-        state = vec4(0.,0.,1.,cell.z);
+        state = vec4(0.,0.,1.,cell.z * Z_SCALE);
         return;
     }
     #endif
@@ -150,5 +152,5 @@ void main() {
         #endif
     #endif
 
-    state = vec4(n, cell.z);
+    state = vec4(n, cell.z * Z_SCALE);
 }
