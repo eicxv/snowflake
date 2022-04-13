@@ -10,10 +10,10 @@ precision mediump float;
 #define TAU 6.28318530718
 #define EPS 0.0001
 
-#define HEIGHT 2. // lattice max height
+#define HEIGHT .1 // lattice max height
 
 #define SEARCH_ITER 4 // max binary search iterations
-#define MARCH_ITER 16 // max ray march iterations
+#define MARCH_ITER 6 // max ray march iterations
 
 uniform highp sampler2D u_renderTexture;
 uniform highp sampler2D u_normalTexture;
@@ -33,7 +33,7 @@ const float c_far = 10000.0;
 const float c_FOVDeg = 178.1;
 
 // number of ray bounces allowed max
-const int c_maxBounces = 12;
+const int c_maxBounces = 8;
 
 // how many renders per frame - make this larger to get around the vsync limitation, and get a better image faster.
 const int c_samplesPerFrame = 8;
@@ -60,31 +60,40 @@ struct HitData {
 #define DEBUG 0
 // #define LIGHT
 
-#if DEBUG == 0
 const Material iceMaterial = Material(
     vec3(0.2, 0.2, 0.3),            // albedo
     vec3(0.0, 0.0, 0.0),            // emissive
-    0.01,                           // specularChance
-    0.01,                           // specularRoughness
+    0.2,                           // specularChance
+    .01,                           // specularRoughness
     vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
     1.309,                          // IOR
     1.,                           // refractionChance
-    0.0000000001,                            // refractionRoughness
-    vec3(0.14, 0.04, 0.04)           // refractionColor
-);
-#else
-const Material iceMaterial = Material(
-    vec3(0.0, 0.0, 0.0),            // albedo
-    vec3(0.0, 0.0, 0.0),            // emissive
-    0.0,                            // specularChance
-    0.01,                           // specularRoughness
-    vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
-    1.309,                          // IOR
-    0.0,                            // refractionChance
     0.0,                            // refractionRoughness
-    vec3(0.0, 0.0, 0.)              // refractionColor
+    vec3(0.0, 0.0, 0.0)           // refractionColor
 );
-#endif
+// const Material iceMaterial = Material(
+//     vec3(0.0, 0.0, 0.0),            // albedo
+//     vec3(0.0, 0.0, 0.0),            // emissive
+//     0.0,                            // specularChance
+//     0.01,                           // specularRoughness
+//     vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
+//     1.309,                          // IOR
+//     0.0,                            // refractionChance
+//     0.0,                            // refractionRoughness
+//     vec3(0.0, 0.0, 0.)              // refractionColor
+// );
+
+// const Material iceMaterial = Material(
+//     vec3(0.2, 0.2, 0.3),             // albedo
+//     vec3(0.0, 0.0, 0.0),             // emissive
+//     0.0000000000001,                 // specularChance
+//     0.01,                            // specularRoughness
+//     vec3(1.0, 1.0, 1.0) * 0.8,       // specularColor
+//     1.309,                           // IOR
+//     1.,                              // refractionChance
+//     0.0000000001,                    // refractionRoughness
+//     vec3(0.14, 0.04, 0.04)           // refractionColor
+// );
 
 vec4 sampleLatticeInter(vec2 uv) {
     uv = (uv + 0.5);
@@ -102,14 +111,15 @@ vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 #define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
 #else
 #define GROUND vec3(0.01, 0.03, 0.05)
-#define MID vec3(0.01, 0.03, 0.05)
-#define SKY vec3(0.1, 0.3, 0.5)
+// #define MID vec3(0.01, 0.03, 0.05)
+#define MID vec3(0.1, 0.1, 0.1)
+#define SKY vec3(0.01, 0.03, 0.05)
 #define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
 #endif
-#define ANGLE_OFFSET 0.3241
-#define COLOR_1 vec3(1., 0.718, 0.012) * 6.
-#define COLOR_2 vec3(0.071, 0.404, 0.51) * 3.
-#define COLOR_3 vec3(0.788, 0.094, 0.29) * 3.
+#define ANGLE_OFFSET 0.
+#define COLOR_1 vec3(1., 0.718, 0.012) *   3.0
+#define COLOR_2 vec3(0.071, 0.404, 0.51) * 3.0
+#define COLOR_3 vec3(0.788, 0.094, 0.29) * 3.0
 
 vec3 environmentAlt(vec3 n) {
     #if DEBUG == 1
@@ -142,6 +152,14 @@ vec3 light(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
     return color * blend;
 }
 
+vec3 sphToCart(float theta, float phi) {
+    return vec3(
+            sin(theta) * cos(phi),
+            sin(theta) * sin(phi),
+            cos(theta)
+    );
+}
+
 vec3 environment(vec3 rayDir) {
     vec3 col;
     vec3 ground = GROUND;
@@ -152,12 +170,20 @@ vec3 environment(vec3 rayDir) {
     col = mix(ground, mid, midGroundBlend);
     col = mix(col, sky, skyMidBlend);
 
+    #if 0
+    col = ground;
+    float tBlend = step(rayDir.x, 0.0);
+    // float tBlend = step(mod(rayDir.x, 0.002), 0.001);
+    vec3 col55 = vec3(1.,1.,1.) * 0.1;
+    col = mix(col55, col, tBlend);
+    #endif
+
     vec3 lightDir;
-    lightDir = vec3(cos(ANGLE_OFFSET), sin(ANGLE_OFFSET), 0);
+    lightDir = sphToCart(1.58 * PI / 2., ANGLE_OFFSET);
     col += light(rayDir, COLOR_1, lightDir, 0.8, 0.9);
-    lightDir = vec3(cos(TAU / 3. + ANGLE_OFFSET), sin(TAU / 3. + ANGLE_OFFSET), 0);
+    lightDir = sphToCart(0.43 * PI / 2., TAU / 3. + ANGLE_OFFSET);
     col += light(rayDir, COLOR_2, lightDir, 0.8, 0.9);
-    lightDir = vec3(cos(2. * TAU / 3. + ANGLE_OFFSET), sin(2. * TAU / 3. + ANGLE_OFFSET), 0);
+    lightDir = sphToCart(PI / 2., 2. * TAU / 3. + ANGLE_OFFSET);
     col += light(rayDir, COLOR_3, lightDir, 0.8, 0.9);
     return col;
 }
@@ -292,6 +318,38 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     return true;
 }
 
+bool hitSphere(vec3 rayPos, vec3 rayDir, inout HitData hitData, vec4 sphere)
+{
+	vec3 m = rayPos - sphere.xyz;
+	float b = dot(m, rayDir);
+	float c = dot(m, m) - sphere.w * sphere.w;
+
+	if(c > 0.0 && b > 0.0) {
+		return false;
+    }
+
+	float disc = b * b - c;
+	if(disc < 0.0)
+		return false;
+
+    bool fromInside = false;
+	float dist = -b - sqrt(disc);
+    if (dist < 0.0) {
+        fromInside = true;
+        dist = -b + sqrt(disc);
+    }
+
+	if (dist > c_minRayDist && dist < hitData.dist) {
+        hitData.fromInside = fromInside;
+        hitData.dist = dist;
+        hitData.normal = normalize((rayPos+rayDir*dist) - sphere.xyz) * (fromInside ? -1.0 : 1.0);
+        hitData.material = iceMaterial;
+        return true;
+    }
+
+    return false;
+}
+
 void hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     #if DEBUG == 0
     hitLatticeMarch(rayPos, rayDir, hitData);
@@ -300,6 +358,8 @@ void hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     if (hit) {
         hitData.material.emissive = (hitData.normal * 0.5 + 0.5) * 0.3;
     }
+    #elif DEBUG == 2
+    hitSphere(rayPos, rayDir, hitData, vec4(0.,0.,0., .3));
     #else
     vec3 pos;
     hitZPlane(rayPos, rayDir, HEIGHT, pos);
@@ -332,7 +392,7 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
         hitScene(rayPos, rayDir, hitData);
 
         if (hitData.dist == c_far) {
-            ret += environment(rayDir) * throughput;
+            // ret += environment(rayDir) * throughput;
             break;
         }
 
@@ -387,7 +447,8 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
         specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hitData.material.specularRoughness*hitData.material.specularRoughness));
 
         vec3 refractionRayDir = refract(rayDir, hitData.normal, hitData.fromInside ? hitData.material.IOR : 1.0 / hitData.material.IOR);
-        refractionRayDir = normalize(mix(refractionRayDir, normalize(-hitData.normal + randomUnitVector(rngState)), hitData.material.refractionRoughness*hitData.material.refractionRoughness));
+        // vec3 refractionRayDir = rayDir;
+        // refractionRayDir = normalize(mix(refractionRayDir, normalize(-hitData.normal + randomUnitVector(rngState)), hitData.material.refractionRoughness*hitData.material.refractionRoughness));
 
         rayDir = mix(diffuseRayDir, specularRayDir, doSpecular);
         rayDir = mix(rayDir, refractionRayDir, doRefraction);
@@ -408,6 +469,7 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
 
         throughput *= 1.0 / p;
     }
+    ret += environment(rayDir) * throughput;
     return ret;
 }
 
@@ -448,5 +510,9 @@ void main() {
     vec3 prevColor = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0).xyz;
     color = mix(prevColor, color, u_blend);
 
+    #if DEBUG > 0
+    float antierror = texelFetch(u_normalTexture, ivec2(0,0), 0).x;
+    color += antierror * 0.;
+    #endif
     fragColor = vec4(color, u_blend);
 }
