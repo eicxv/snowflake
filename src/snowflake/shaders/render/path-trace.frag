@@ -45,6 +45,7 @@ struct Material {
     float specularRoughness;   // how rough the specular reflections are
     vec3  specularColor;       // the color tint of specular reflections
     float IOR;                 // index of refraction. used by fresnel and refraction.
+    float invIOR;                 // inverse of index of refraction
     float refractionChance;    // percent chance of doing a refractive transmission
     float refractionRoughness; // how rough the refractive transmissions are
     vec3  refractionColor;     // absorption for beer's law
@@ -59,27 +60,33 @@ struct HitData {
 
 #define DEBUG 0
 // #define LIGHT
+#define DIFFUSE_AND_ROUGHNESS 0
+#define DIFFUSE 0
+#define ABSORBTION 0
+#define EMISSIVE 0
+#define ALBEDO 0
 
 const Material iceMaterial = Material(
-    vec3(0.2, 0.2, 0.3),            // albedo
-    vec3(0.0, 0.0, 0.0),            // emissive
-    0.2,                           // specularChance
-    .01,                           // specularRoughness
-    vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
-    1.309,                          // IOR
+    vec3(0., 0., 0.),          // albedo
+    vec3(0.0, 0.0, 0.0),          // emissive
+    0.2,                          // specularChance
+    0.01 * 0.01,                  // specularRoughness
+    vec3(1.0, 1.0, 1.0) * 0.8,    // specularColor
+    1.309,                        // IOR
+    1. / 1.309,                        // invIOR
     1.,                           // refractionChance
-    0.0,                            // refractionRoughness
+    0.0 * 0.0,                    // refractionRoughness
     vec3(0.0, 0.0, 0.0)           // refractionColor
 );
 // const Material iceMaterial = Material(
 //     vec3(0.0, 0.0, 0.0),            // albedo
 //     vec3(0.0, 0.0, 0.0),            // emissive
 //     0.0,                            // specularChance
-//     0.01,                           // specularRoughness
+//     0.01 * 0.01,                    // specularRoughness
 //     vec3(1.0, 1.0, 1.0) * 0.8,      // specularColor
 //     1.309,                          // IOR
 //     0.0,                            // refractionChance
-//     0.0,                            // refractionRoughness
+//     0.0 * 0.0,                            // refractionRoughness
 //     vec3(0.0, 0.0, 0.)              // refractionColor
 // );
 
@@ -87,11 +94,11 @@ const Material iceMaterial = Material(
 //     vec3(0.2, 0.2, 0.3),             // albedo
 //     vec3(0.0, 0.0, 0.0),             // emissive
 //     0.0000000000001,                 // specularChance
-//     0.01,                            // specularRoughness
+//     0.01 * 0.01,                     // specularRoughness
 //     vec3(1.0, 1.0, 1.0) * 0.8,       // specularColor
 //     1.309,                           // IOR
 //     1.,                              // refractionChance
-//     0.0000000001,                    // refractionRoughness
+//     0.0000000001 * 0.0000000001,     // refractionRoughness
 //     vec3(0.14, 0.04, 0.04)           // refractionColor
 // );
 
@@ -350,19 +357,20 @@ bool hitSphere(vec3 rayPos, vec3 rayDir, inout HitData hitData, vec4 sphere)
     return false;
 }
 
-void hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
+bool hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     #if DEBUG == 0
-    hitLatticeMarch(rayPos, rayDir, hitData);
+    return hitLatticeMarch(rayPos, rayDir, hitData);
     #elif DEBUG == 1
     bool hit = hitLatticeMarch(rayPos, rayDir, hitData);
     if (hit) {
         hitData.material.emissive = (hitData.normal * 0.5 + 0.5) * 0.3;
     }
+    return hit;
     #elif DEBUG == 2
-    hitSphere(rayPos, rayDir, hitData, vec4(0.,0.,0., .3));
+    return hitSphere(rayPos, rayDir, hitData, vec4(0.,0.,0., .3));
     #else
     vec3 pos;
-    hitZPlane(rayPos, rayDir, HEIGHT, pos);
+    bool hit = hitZPlane(rayPos, rayDir, HEIGHT, pos);
     vec4 tex = sampleLatticeInter(pos.xy);
     hitData.dist = 1.;
     hitData.material =  Material(
@@ -372,10 +380,12 @@ void hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
         0.,                     // specularRoughness
         vec3(0.),               // specularColor
         1.,                     // IOR
+        1.,                     // invIOR
         0.,                     // refractionChance
         0.,                     // refractionRoughness
         vec3(0.)                // refractionColor
     );
+    return hit;
     #endif
 }
 
@@ -396,9 +406,11 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
             break;
         }
 
+        #if ABSORBTION
         // absorption
         if (hitData.fromInside)
             throughput *= exp(-hitData.material.refractionColor * hitData.dist);
+        #endif
 
         float specularChance = hitData.material.specularChance;
         float refractionChance = hitData.material.refractionChance;
@@ -417,48 +429,54 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
         float doSpecular = 0.0;
         float doRefraction = 0.0;
         float raySelectRoll = randomFloat01(rngState);
-		if (specularChance > 0.0 && raySelectRoll < specularChance) {
+		if (raySelectRoll < specularChance) {
             doSpecular = 1.0;
             rayProbability = specularChance;
         }
-        else if (refractionChance > 0.0 && raySelectRoll < specularChance + refractionChance) {
+        else {
             doRefraction = 1.0;
             rayProbability = refractionChance;
-        }
-        else {
-            rayProbability = 1.0 - (specularChance + refractionChance);
         }
 
         // avoid potential divide by zero
 		rayProbability = max(rayProbability, 0.001);
 
         // nudge ray away from surface
-        if (doRefraction == 1.0) {
-            rayPos = (rayPos + rayDir * hitData.dist) - hitData.normal * c_rayPosNudge;
-        }
-        else {
-            rayPos = (rayPos + rayDir * hitData.dist) + hitData.normal * c_rayPosNudge;
-        }
+        rayPos = (rayPos + rayDir * hitData.dist) - sign(doRefraction - 0.5) * hitData.normal * c_rayPosNudge;
 
         // Calculate a new ray direction.
+        // #if DIFFUSE_AND_ROUGHNESS
         vec3 diffuseRayDir = normalize(hitData.normal + randomUnitVector(rngState));
+        // #endif
 
         vec3 specularRayDir = reflect(rayDir, hitData.normal);
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hitData.material.specularRoughness*hitData.material.specularRoughness));
+        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hitData.material.specularRoughness));
 
-        vec3 refractionRayDir = refract(rayDir, hitData.normal, hitData.fromInside ? hitData.material.IOR : 1.0 / hitData.material.IOR);
+        vec3 refractionRayDir = refract(rayDir, hitData.normal, hitData.fromInside ? hitData.material.IOR : hitData.material.invIOR);
         // vec3 refractionRayDir = rayDir;
-        // refractionRayDir = normalize(mix(refractionRayDir, normalize(-hitData.normal + randomUnitVector(rngState)), hitData.material.refractionRoughness*hitData.material.refractionRoughness));
+        // refractionRayDir = normalize(mix(refractionRayDir, normalize(-hitData.normal + randomUnitVector(rngState)), hitData.material.refractionRoughness));
 
+        #if DIFFUSE
         rayDir = mix(diffuseRayDir, specularRayDir, doSpecular);
+        #else
+        rayDir = specularRayDir;
+        #endif
         rayDir = mix(rayDir, refractionRayDir, doRefraction);
 
 		// emissive lighting
+        #if EMISSIVE
         ret += hitData.material.emissive * throughput;
-
+        #endif
         // update throughput
-        if (doRefraction == 0.0)
+        #if DIFFUSE
+        if (doRefraction == 0.0) {
         	throughput *= mix(hitData.material.albedo, hitData.material.specularColor, doSpecular);
+        }
+        #else
+        if (doRefraction == 0.0) {
+        	throughput *= hitData.material.specularColor;
+        }
+        #endif
 
         throughput /= rayProbability;
 
