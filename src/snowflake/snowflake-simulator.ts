@@ -14,6 +14,7 @@ import {
 import {
   AttachmentProgram,
   DiffusionFreezingProgram,
+  EnvironmentChangeProgram,
   MeltingProgram,
 } from "./snowflake-simulation-programs";
 
@@ -54,6 +55,12 @@ export class SnowflakeSimulator {
         null
       ),
       melting: new MeltingProgram(this.gl, this.uniforms, this.vaos.sim, null),
+      environmentChange: new EnvironmentChangeProgram(
+        this.gl,
+        this.uniforms,
+        this.vaos.sim,
+        null
+      ),
     };
     return programs;
   }
@@ -69,6 +76,8 @@ export class SnowflakeSimulator {
       u_kappa: simConfig.kappa,
       u_rho: simConfig.rho,
       u_sigma: simConfig.sigma,
+      u_nu: simConfig.nu,
+      u_delta: simConfig.delta,
       u_latticeTexture: this.variables.lattice.getTexture(),
     };
     return uniforms;
@@ -114,6 +123,17 @@ export class SnowflakeSimulator {
       this.programs.melting.framebuffer = variable.getFramebuffer();
       this.programs.melting.run();
     }
+  }
+
+  environmentChange(): void {
+    const [width, height] = this.variables.lattice.resolution;
+    this.gl.viewport(0, 0, width, height);
+    const variable = this.variables.lattice;
+
+    this.uniforms.u_latticeTexture = variable.getTexture();
+    variable.advance();
+    this.programs.environmentChange.framebuffer = variable.getFramebuffer();
+    this.programs.environmentChange.run();
   }
 
   initialState(resolution: [number, number]): Float32Array {
