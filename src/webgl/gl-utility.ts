@@ -1,4 +1,10 @@
 import {
+  ExtensionUnavailableError,
+  ProgramLinkError,
+  ShaderCompilationError,
+  WebglCreationError,
+} from "./errors";
+import {
   FragmentShader,
   LocationCollection,
   ShaderSource,
@@ -46,7 +52,7 @@ export function getExtension(
 ): void {
   const ext = gl.getExtension(extension);
   if (ext == null) {
-    throw new Error(`Failed to enable ${extension} extension`);
+    throw new ExtensionUnavailableError(extension);
   }
 }
 
@@ -57,9 +63,7 @@ export function compileShader(
 ): WebGLShader {
   const shader = gl.createShader(type);
   if (shader == null) {
-    throw new Error(
-      `Failed to create shader of type "${gl.getShaderInfoLog(type)}"`
-    );
+    throw new WebglCreationError("Shader");
   }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
@@ -76,7 +80,7 @@ export function getLocations(
     uniformNames.map((unifName) => {
       const location = gl.getUniformLocation(program, unifName);
       if (location == null) {
-        throw new Error(`Failed to create location ${unifName}`);
+        console.warn(`Failed to create location ${unifName}`);
       }
       return [unifName, location];
     })
@@ -91,7 +95,7 @@ export function createProgram(
 ): WebGLProgram {
   const program = gl.createProgram();
   if (program == null) {
-    throw new Error("Failed to create program");
+    throw new WebglCreationError("Program");
   }
 
   if (!(vertShader instanceof WebGLShader)) {
@@ -115,14 +119,10 @@ export function createProgram(
     for (const shader of [vertShader, fragShader]) {
       const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
       if (!compiled) {
-        throw new Error(
-          `Shader compilation failed: ${gl.getShaderInfoLog(shader)}`
-        );
+        throw new ShaderCompilationError(gl, shader);
       }
     }
-    throw new Error(
-      `Program creation failed: ${gl.getProgramInfoLog(program)}`
-    );
+    throw new ProgramLinkError(gl, program);
   }
   return program;
 }
@@ -140,7 +140,7 @@ export function createTexture(
 ): WebGLTexture {
   const texture = gl.createTexture();
   if (texture == null) {
-    throw new Error("Failed to create texture");
+    throw new WebglCreationError("Texture");
   }
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[filter]);
@@ -172,7 +172,7 @@ export function createFramebuffer(
 ): WebGLFramebuffer {
   const framebuffer = gl.createFramebuffer();
   if (framebuffer == null) {
-    throw new Error("Failed to create framebuffer");
+    throw new WebglCreationError("Framebuffer");
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   const target = gl.FRAMEBUFFER;
