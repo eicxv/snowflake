@@ -63,12 +63,6 @@ export function compileShader(
   }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
-  const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-  if (!compiled) {
-    throw new Error(
-      `Shader compilation failed: ${gl.getShaderInfoLog(shader)}`
-    );
-  }
 
   return shader;
 }
@@ -118,6 +112,14 @@ export function createProgram(
 
   const linked = gl.getProgramParameter(program, gl.LINK_STATUS);
   if (!linked) {
+    for (const shader of [vertShader, fragShader]) {
+      const compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      if (!compiled) {
+        throw new Error(
+          `Shader compilation failed: ${gl.getShaderInfoLog(shader)}`
+        );
+      }
+    }
     throw new Error(
       `Program creation failed: ${gl.getProgramInfoLog(program)}`
     );
