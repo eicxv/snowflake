@@ -18,6 +18,7 @@ export abstract class Program {
   uniforms: Uniforms;
   locations: LocationCollection;
   vao: WebGLVertexArrayObject;
+  numberOfVertices: number;
   constructor(
     gl: WebGL2RenderingContext,
     fragShader: FragmentShader,
@@ -25,7 +26,8 @@ export abstract class Program {
     localUniforms: string[],
     uniforms: Uniforms,
     vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
+    framebuffer: WebGLFramebuffer | null = null,
+    numberOfVertices: number
   ) {
     this.gl = gl;
     this.uniforms = uniforms;
@@ -33,7 +35,19 @@ export abstract class Program {
     this.vao = vao;
     this.program = createProgram(gl, vertShader, fragShader);
     this.locations = getLocations(gl, this.program, localUniforms);
+    this.numberOfVertices = numberOfVertices;
   }
 
-  abstract run(): void;
+  run(): void {
+    const gl = this.gl;
+
+    gl.useProgram(this.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+    gl.bindVertexArray(this.vao);
+    this.bindUniforms();
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.numberOfVertices);
+  }
+
+  abstract bindUniforms(): void;
 }
