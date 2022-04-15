@@ -112,11 +112,11 @@ vec4 interpolateValue(vec2 uv, ivec2 res) {
     vec3 weights = barycentricCoords(uv, c0, c1, c2);
 
     // transforms hexagon centers to cartesian integer coordiantes
-    // TODO: optimization, work in integer coordinates in closestHexes
     mat2 toIntCoords = mat2(1., 1./sqrt(3.), 0., 2./sqrt(3.));
     c0 *= toIntCoords;
     c1 *= toIntCoords;
     c2 *= toIntCoords;
+
     ivec2 coord;
     int sextant, flip;
     vec4 value = vec4(0.);
@@ -146,12 +146,11 @@ vec4 interpolateValue(vec2 uv, ivec2 res) {
 
 void main () {
     ivec2 res = textureSize(u_latticeTexture, 0);
-    // vec2 uv = (v_uv - 0.5) * 2. * float(res.x);
-    vec2 uv = (v_uv - 0.5) * 0.65 * float(res.x);
+    vec2 uv = (v_uv - 0.5) * 2. * float(res.x);
 
     vec4 interpolatedValue = interpolateValue(uv, res);
 
-    if (interpolatedValue.w < 0.001) {
+    if (interpolatedValue.w < 0.0001) {
         interpolatedValue.xyz = vec3(0., 0., 1.);
     }
 
