@@ -77,7 +77,6 @@ export class SnowflakeSimulator {
       u_rho: simConfig.rho,
       u_sigma: simConfig.sigma,
       u_nu: simConfig.nu,
-      u_delta: simConfig.delta,
       u_latticeTexture: this.variables.lattice.getTexture(),
     };
     return uniforms;
@@ -150,6 +149,34 @@ export class SnowflakeSimulator {
     state[2] = 1; // c = 1
     state[3] = 0; // d = 0
     return state;
+  }
+
+  getSnowflakeRadius(): number {
+    const gl = this.gl;
+    const width = this.variables.lattice.resolution[0];
+    const framebuffer = this.variables.lattice.getFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    const buffer = new Float32Array(4 * width);
+    gl.readPixels(0, 0, width, 1, gl.RGBA, gl.FLOAT, buffer);
+
+    return this.findFirstNonFrozenCell(buffer);
+  }
+
+  private findFirstNonFrozenCell(values: ArrayLike<number>): number {
+    let left = 0;
+    let right = values.length / 4 - 1;
+    const target = 0;
+
+    while (left < right) {
+      const mid: number = Math.floor((left + right) / 2);
+
+      if (values[mid * 4] > target) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+    return left;
   }
 
   private createVao(attributeData: Float32Array): WebGLVertexArrayObject {
