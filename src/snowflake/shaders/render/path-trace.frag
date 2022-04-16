@@ -13,7 +13,9 @@ precision highp int;
 #define TAU 6.28318530718
 #define EPS 0.0001
 
-#define HEIGHT .1 // lattice max height
+// #define HEIGHT .1 // lattice max height
+#define HEIGHT 2. // lattice max height
+#define XY_SCALE 20.
 
 #define SEARCH_ITER 4 // max binary search iterations
 #define MARCH_ITER 6 // max ray march iterations
@@ -33,6 +35,7 @@ const float c_rayPosNudge = 0.01;
 const float c_far = 10000.0;
 
 // camera FOV
+// const float c_FOVDeg = 15.0;
 const float c_FOVDeg = 178.0;
 
 // number of ray bounces allowed max
@@ -130,17 +133,15 @@ float fresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float
         return mix(f0, f90, ret);
 }
 
-vec4 sampleLatticeInter(vec2 uv) {
-    uv = (uv + 0.5);
+vec4 sampleLattice(vec2 uv) {
+    uv /= XY_SCALE;
+    uv += 0.5;
     return texture(u_normalTexture, uv);
 }
 
 vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
     return a + b * cos(TAU * (c * t + d));
 }
-
-
-
 
 #ifdef LIGHT
 #define GROUND vec3(0.05, 0.08, 0.26) * 2.5
@@ -149,7 +150,7 @@ vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 #define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
 #else
 #define GROUND vec3(0.01, 0.03, 0.05)
-#define GROUND_ALT vec3(0.005, 0.02, 0.03)
+#define GROUND_ALT vec3(0.005, 0.01, 0.02)
 // #define MID vec3(0.01, 0.03, 0.05)
 #define MID vec3(0.1, 0.1, 0.1)
 #define SKY vec3(0.01, 0.03, 0.05)
@@ -160,9 +161,10 @@ vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 #define COLOR_2 vec3(0.071, 0.404, 0.51) * 3.0
 #define COLOR_3 vec3(0.788, 0.094, 0.29) * 3.0
 
-#define CORNERS vec4(0., .7, 0.2, .6)
+#define CORNERS vec4(0., 1.0, 0.2, .6)
 
 float modulateGround(vec2 p) {
+    p /= XY_SCALE;
     vec4 c = CORNERS;
     return
         c.x +
@@ -264,7 +266,7 @@ vec3 binarySearchMarch(vec3 p0, vec3 p1, bool inside, out vec4 tex) {
     // assumes either p0 or p1 is inside height map
     vec3 p = mix(p0, p1, 0.5);
     for (int i = 0; i < SEARCH_ITER; i++) {
-        tex = sampleLatticeInter(p.xy);
+        tex = sampleLattice(p.xy);
         if (inside ^^ (abs(p.z) > tex.w)) {
             p0 = p;
         } else {
@@ -272,7 +274,7 @@ vec3 binarySearchMarch(vec3 p0, vec3 p1, bool inside, out vec4 tex) {
         }
         p = mix(p0, p1, 0.5);
     }
-    tex = sampleLatticeInter(p.xy);
+    tex = sampleLattice(p.xy);
     return p;
 }
 
@@ -286,19 +288,19 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
             return false;
         }
     }
-    vec4 tex = sampleLatticeInter(pos.xy);
+    vec4 tex = sampleLattice(pos.xy);
     bool isInside = abs(pos.z) < tex.w;
     float stepLen;
     for (int i = 0; i < MARCH_ITER; i++) {
         stepLen = abs(abs(pos.z) - tex.w);
         pos += dir * stepLen;
-        tex = sampleLatticeInter(pos.xy);
+        tex = sampleLattice(pos.xy);
         if (isInside != abs(pos.z) < tex.w) {
             pos = binarySearchMarch(pos - dir * stepLen, pos, isInside, tex);
             break;
         }
     }
-    tex = sampleLatticeInter(pos.xy);
+    tex = sampleLattice(pos.xy);
 
     if (tex.w < EPS) {
         return false;
@@ -420,7 +422,7 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
 }
 
 void getCameraVectors(out vec3 cameraPos, out vec3 cameraFwd, out vec3 cameraUp, out vec3 cameraRight) {
-    cameraPos = vec3(0.01, 0.01, 30.0);
+    cameraPos = vec3(0.01, 0.01, 600.0);
     cameraFwd = vec3(0.0, 0.0, -1.0);
     cameraRight = normalize(vec3(1.0, 0.02, 0.0));
     cameraUp = normalize(cross(cameraFwd, cameraRight));
