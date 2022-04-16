@@ -41,7 +41,7 @@ export function createAttributeBuffer(
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
   if (buffer == null) {
-    throw new Error("Failed to create attribute buffer");
+    throw new WebglCreationError("attribute buffer");
   }
   return buffer;
 }
@@ -63,7 +63,7 @@ export function compileShader(
 ): WebGLShader {
   const shader = gl.createShader(type);
   if (shader == null) {
-    throw new WebglCreationError("Shader");
+    throw new WebglCreationError("shader");
   }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
@@ -95,7 +95,7 @@ export function createProgram(
 ): WebGLProgram {
   const program = gl.createProgram();
   if (program == null) {
-    throw new WebglCreationError("Program");
+    throw new WebglCreationError("program");
   }
 
   if (!(vertShader instanceof WebGLShader)) {
@@ -140,7 +140,7 @@ export function createTexture(
 ): WebGLTexture {
   const texture = gl.createTexture();
   if (texture == null) {
-    throw new WebglCreationError("Texture");
+    throw new WebglCreationError("texture");
   }
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[filter]);
@@ -172,7 +172,7 @@ export function createFramebuffer(
 ): WebGLFramebuffer {
   const framebuffer = gl.createFramebuffer();
   if (framebuffer == null) {
-    throw new WebglCreationError("Framebuffer");
+    throw new WebglCreationError("framebuffer");
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   const target = gl.FRAMEBUFFER;

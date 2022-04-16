@@ -1,3 +1,4 @@
+import { ContextCreationError } from "./errors";
 import { Uniforms } from "./program";
 
 export interface Driver {
@@ -17,7 +18,7 @@ export abstract class AbstractDriver implements Driver {
   constructor(canvas: HTMLCanvasElement, glAttributes: WebGLContextAttributes) {
     const gl = canvas.getContext("webgl2", glAttributes);
     if (gl == null) {
-      throw new Error("webgl2 not supported");
+      throw new ContextCreationError();
     }
     this.gl = gl;
     this.animate = this.animate.bind(this);

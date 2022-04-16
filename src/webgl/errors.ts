@@ -13,15 +13,26 @@ export class WebglCreationError extends WebglError {
   }
 }
 
+export class ContextCreationError extends WebglCreationError {
+  constructor(message?: string) {
+    super("Webgl2 context", message);
+    this.name = "ContextCreationError";
+  }
+}
+
 export class ExtensionUnavailableError extends WebglError {
+  extensionName: string;
+
   constructor(extension: string) {
     super(`Failed to enable ${extension} extension`);
     this.name = "ExtensionUnavailableError";
+    this.extensionName = extension;
   }
 }
 
 export class ProgramLinkError extends WebglCreationError {
   programInfoLog: string | null;
+
   constructor(
     gl: WebGL2RenderingContext,
     program: WebGLProgram,
@@ -37,6 +48,7 @@ export class ProgramLinkError extends WebglCreationError {
 
 export class ShaderCompilationError extends WebglCreationError {
   shaderInfoLog: string | null;
+
   constructor(
     gl: WebGL2RenderingContext,
     shader: WebGLShader,

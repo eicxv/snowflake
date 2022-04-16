@@ -6,7 +6,7 @@ export type VertexShader = WebGLShader;
 export type FragmentShader = WebGLShader;
 
 export interface LocationCollection {
-  [locationName: string]: WebGLUniformLocation;
+  [locationName: string]: WebGLUniformLocation | null;
 }
 
 export type Uniforms = Record<string, number | number[] | WebGLTexture>;
