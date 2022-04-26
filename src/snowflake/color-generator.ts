@@ -162,12 +162,12 @@ function genMultiplier(
     case Lightness.Standard:
       break;
   }
-  const groundMult = random(0.075, 0.16);
+  const groundMult = random(0.08, 0.18);
   colors.LIGHT_1_COL.scale = lightMultipliers[0];
   colors.LIGHT_2_COL.scale = lightMultipliers[1];
   colors.LIGHT_3_COL.scale = lightMultipliers[2];
   colors.GROUND_COL.scale = groundMult;
-  colors.GROUND_ACCENT_COL.scale = groundMult / 3;
+  colors.GROUND_ACCENT_COL.scale = groundMult * 0.5;
   colors.HORIZON_COL.scale = groundMult * 1.25;
   colors.SKY_COL.scale = groundMult * 1.25;
 }
@@ -256,6 +256,7 @@ export function generateOverwrites(): Record<string, string> {
   const values: Record<string, number | number[]> = {
     ...generateLightDirections(),
     ...generateColors(),
+    GROUND_SEED: random(0, 10000),
   };
   const overwrites: Record<string, string> = {};
   Object.entries(values).forEach(([key, value]) => {

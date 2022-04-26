@@ -24,6 +24,7 @@ export interface PathTraceOverwrite extends Overwrite {
   LIGHT_1_DIR: string;
   LIGHT_2_DIR: string;
   LIGHT_3_DIR: string;
+  GROUND_SEED: string;
 }
 
 export interface SnowflakeVisConfig {

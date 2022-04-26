@@ -31,6 +31,7 @@ precision highp int;
 #define LIGHT_1_DIR vec3(0.13230, 0.59848, -0.79016)
 #define LIGHT_2_DIR vec3(-0.59619, -0.18837, 0.78043)
 #define LIGHT_3_DIR vec3(0.73768, -0.67515, 0.0)
+#define GROUND_SEED 143u
 
 uniform highp sampler2D u_renderTexture;
 uniform highp sampler2D u_normalTexture;
@@ -142,18 +143,35 @@ vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 }
 
 #define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
-#define CORNERS vec4(0., 1.0, 0.2, .6)
+
+uint iqint3(uvec2 x) {
+    uvec2 q = 1103515245u * ((x>>1u) ^ (x.yx));
+    uint  n = 1103515245u * ((q.x) ^ (q.y >> 3u));
+    return n;
+}
+
+float iqFloat(uvec3 x) {
+    return float(iqint3(uvec2(iqint3(x.xy), x.z))) / 4294967296.0;
+}
+
 
 float modulateGround(vec2 p) {
     p /= XY_SCALE;
-    vec4 c = CORNERS;
+    p *= 2.;
+
+    uvec3 rp = uvec3(p + 1000., GROUND_SEED);
+    vec4 c = vec4(iqFloat(rp + uvec3(0, 0, 0)),
+                  iqFloat(rp + uvec3(1, 0, 0)),
+                  iqFloat(rp + uvec3(0, 1, 0)),
+                  iqFloat(rp + uvec3(1, 1, 0)));
+    vec2 r = fract(p);
     return
         c.x +
-        (c.y - c.x) * smoothstep(0.0, 1.0, p.x) +
-        (c.z - c.x) * smoothstep(0.0, 1.0, p.y) +
+        (c.y - c.x) * smoothstep(0.0, 1.0, r.x) +
+        (c.z - c.x) * smoothstep(0.0, 1.0, r.y) +
         (c.x - c.y - c.z + c.w) *
-        smoothstep(0.0, 1.0, p.x) *
-        smoothstep(0.0, 1.0, p.y);
+        smoothstep(0.0, 1.0, r.x) *
+        smoothstep(0.0, 1.0, r.y);
 }
 
 vec3 getGround(vec3 rayPos, vec3 rayDir, inout uint rngState) {
