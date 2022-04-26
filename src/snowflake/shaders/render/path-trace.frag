@@ -90,17 +90,14 @@ float ign(vec2 v) {
     return fract(magic.z * fract(dot(v, magic.xy)));
 }
 
-uint wangHash(inout uint seed) {
-    seed = uint(seed ^ 61u) ^ uint(seed >> 16u);
-    seed *= 9u;
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
+uint pcg(inout uint state) {
+	state *= 747796405u + 2891336453u;
+	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+	return (word >> 22u) ^ word;
 }
 
 float randomFloat01(inout uint state) {
-    return float(wangHash(state)) / 4294967296.0;
+    return float(pcg(state)) / 4294967296.0;
 }
 
 vec3 randomUnitVector(inout uint state) {
