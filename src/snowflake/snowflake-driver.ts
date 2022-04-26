@@ -41,7 +41,7 @@ export class SnowflakeDriver extends AbstractDriver {
     const sf = this.snowflake;
     const cConfig = this.controlConfig;
     sf.pathTrace(cConfig.growStepPerCycle);
-    if (sf.growCount < cConfig.growSteps) {
+    if (sf.growthCount < cConfig.growSteps) {
       sf.grow(cConfig.growStepPerCycle);
       sf.interpolate();
       if (cConfig.renderBlendReset != null) {
@@ -49,6 +49,14 @@ export class SnowflakeDriver extends AbstractDriver {
       }
     }
     sf.display();
+  }
+
+  getRadius(): number {
+    return this.snowflake.getSnowflakeRadius();
+  }
+
+  get growthCount(): number {
+    return this.snowflake.growthCount;
   }
 
   dumpTexture(): Float32Array {

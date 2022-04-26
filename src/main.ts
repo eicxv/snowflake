@@ -1,3 +1,5 @@
+import { displayError } from "./display-error";
+import { generateOverwrites } from "./snowflake/color-generator";
 import {
   fernlikeSimConfig,
   SnowflakeControlConfig,
@@ -19,6 +21,7 @@ const cameraSettings: CameraSettings = {
 const visConfig: SnowflakeVisConfig = {
   resolution: [1000, 1000],
   cameraSettings,
+  overwrites: { pathTrace: generateOverwrites() },
 };
 
 const controlConfig: SnowflakeControlConfig = {
@@ -36,32 +39,27 @@ function main(): void {
   try {
     driver = new SnowflakeDriver(canvas, controlConfig, simConfig, visConfig);
   } catch (err) {
-    displayError(err);
+    if (
+      err instanceof WebglCreationError ||
+      err instanceof ExtensionUnavailableError
+    ) {
+      displayError(err);
+    } else {
+      throw err;
+    }
     return;
   }
 
-  driver.startAnimation();
+  rndr(driver);
 }
 
-function displayError(err: unknown): void {
-  let message;
-  if (err instanceof WebglCreationError) {
-    message =
-      "Failed to create Webgl2 context. Ensure Webgl2 is supported on this device and browser.";
-  } else if (err instanceof ExtensionUnavailableError) {
-    message = `Required Webgl extension "${err.extensionName}" is unavailable.`;
-  } else {
-    throw err;
-  }
-  const div = document.createElement("div");
-  div.classList.add("error");
-  const h = document.createElement("h1");
-  const p = document.createElement("p");
-  h.textContent = "Webgl Error";
-  p.textContent = message;
-  div.appendChild(h);
-  div.appendChild(p);
-  document.body.append(div);
+function rndr(driver: SnowflakeDriver): void {
+  const sf = driver.snowflake;
+  sf.grow(10000);
+  sf.interpolate();
+  sf.pathTrace(300);
+  sf.display();
+  // sf.visualize();
 }
 
 main();

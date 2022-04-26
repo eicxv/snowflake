@@ -1,4 +1,5 @@
 import { Program } from "../webgl/program";
+import { preprocessSource } from "./../webgl/gl-utility";
 import computeFlippedSource from "./shaders/common/compute-flipped.vert?raw";
 import computeSource from "./shaders/common/compute.vert?raw";
 import displaySource from "./shaders/render/display.frag?raw";
@@ -78,7 +79,8 @@ export class PathTraceProgram extends Program {
     gl: WebGL2RenderingContext,
     uniforms: SnowflakeUniforms,
     vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
+    framebuffer?: WebGLFramebuffer | null,
+    overwrites?: Record<string, string> | null
   ) {
     const localUniforms = [
       "u_renderTexture",
@@ -86,9 +88,11 @@ export class PathTraceProgram extends Program {
       "u_blend",
       "u_seed",
     ];
+    overwrites = overwrites ?? {};
+    const fragSource = preprocessSource(pathTraceSource, overwrites);
     super(
       gl,
-      pathTraceSource,
+      fragSource,
       renderSource,
       localUniforms,
       uniforms,

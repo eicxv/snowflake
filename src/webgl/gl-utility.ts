@@ -182,3 +182,16 @@ export function createFramebuffer(
   gl.framebufferTexture2D(target, attachment, texTarget, texture, level);
   return framebuffer;
 }
+
+export function preprocessSource(
+  source: string,
+  defineOverwrites: { [key: string]: string }
+): string {
+  for (const [key, value] of Object.entries(defineOverwrites)) {
+    source = source.replace(
+      new RegExp(`#define ${key} .*`, "g"),
+      `#define ${key} ${value}`
+    );
+  }
+  return source;
+}

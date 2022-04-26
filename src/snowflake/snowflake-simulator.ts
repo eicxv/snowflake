@@ -24,7 +24,7 @@ export class SnowflakeSimulator {
   simConfig: SnowflakeSimConfig;
   uniforms: SnowflakeSimulationUniforms;
   internalSteps = 1;
-  growCount = 0;
+  growthCount = 0;
   programs: Record<string, Program>;
   vaos: Record<string, WebGLVertexArrayObject>;
   constructor(gl: WebGL2RenderingContext, simConfig: SnowflakeSimConfig) {
@@ -104,7 +104,7 @@ export class SnowflakeSimulator {
     const [width, height] = this.variables.lattice.resolution;
     this.gl.viewport(0, 0, width, height);
     const variable = this.variables.lattice;
-    this.growCount += cycles;
+    this.growthCount += cycles;
 
     for (let _ = 0; _ < cycles; _++) {
       this.uniforms.u_latticeTexture = variable.getTexture();

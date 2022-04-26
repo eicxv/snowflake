@@ -46,7 +46,8 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
         this.gl,
         this.uniforms,
         this.vaos.vis,
-        null
+        null,
+        this.visConfig.overwrites?.pathTrace
       ),
       display: new DisplayProgram(this.gl, this.uniforms, this.vaos.vis, null),
       interpolate: new InterpolateProgram(

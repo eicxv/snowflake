@@ -13,12 +13,24 @@ precision highp int;
 #define TAU 6.28318530718
 #define EPS 0.0001
 
-// #define HEIGHT .1 // lattice max height
 #define HEIGHT 2. // lattice max height
 #define XY_SCALE 20.
 
 #define SEARCH_ITER 4 // max binary search iterations
 #define MARCH_ITER 6 // max ray march iterations
+
+
+// environment
+#define GROUND_COL vec3(0.01, 0.03, 0.05)
+#define GROUND_ACCENT_COL vec3(0.005, 0.01, 0.02)
+#define HORIZON_COL vec3(0.1, 0.1, 0.1)
+#define SKY_COL vec3(0.01, 0.03, 0.05)
+#define LIGHT_1_COL vec3(1., 0.1, 0.1) *   3.0
+#define LIGHT_2_COL vec3(0.071, 0.404, 0.51) * 3.0
+#define LIGHT_3_COL vec3(0.788, 0.094, 0.29) * 3.0
+#define LIGHT_1_DIR vec3(0.13230, 0.59848, -0.79016)
+#define LIGHT_2_DIR vec3(-0.59619, -0.18837, 0.78043)
+#define LIGHT_3_DIR vec3(0.73768, -0.67515, 0.0)
 
 uniform highp sampler2D u_renderTexture;
 uniform highp sampler2D u_normalTexture;
@@ -61,10 +73,6 @@ struct HitData {
     vec3 normal;
 };
 
-// #define LIGHT
-#define DIFFUSE_AND_ROUGHNESS 0
-#define DIFFUSE 0
-
 const Material iceMaterial = Material(
     0.2,                          // specularChance
     0.01 * 0.01,                  // specularRoughness
@@ -75,16 +83,6 @@ const Material iceMaterial = Material(
     0.01 * 0.01,                  // refractionRoughness
     vec3(0.0, 0.0, 0.0)           // refractionColor
 );
-
-// const Material iceMaterial = Material(
-//     0.0000000000001,                 // specularChance
-//     0.01 * 0.01,                     // specularRoughness
-//     vec3(1.0, 1.0, 1.0) * 0.8,       // specularColor
-//     1.309,                           // IOR
-//     1.,                              // refractionChance
-//     0.0000000001 * 0.0000000001,     // refractionRoughness
-//     vec3(0.14, 0.04, 0.04)           // refractionColor
-// );
 
 float ign(vec2 v) {
     vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
@@ -143,24 +141,7 @@ vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
     return a + b * cos(TAU * (c * t + d));
 }
 
-#ifdef LIGHT
-#define GROUND vec3(0.05, 0.08, 0.26) * 2.5
-#define SKY vec3(0.03)
-#define MID vec3(0.03)
 #define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
-#else
-#define GROUND vec3(0.01, 0.03, 0.05)
-#define GROUND_ALT vec3(0.005, 0.01, 0.02)
-// #define MID vec3(0.01, 0.03, 0.05)
-#define MID vec3(0.1, 0.1, 0.1)
-#define SKY vec3(0.01, 0.03, 0.05)
-#define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
-#endif
-#define ANGLE_OFFSET 0.
-#define COLOR_1 vec3(1., 0.718, 0.012) *   3.0
-#define COLOR_2 vec3(0.071, 0.404, 0.51) * 3.0
-#define COLOR_3 vec3(0.788, 0.094, 0.29) * 3.0
-
 #define CORNERS vec4(0., 1.0, 0.2, .6)
 
 float modulateGround(vec2 p) {
@@ -176,8 +157,8 @@ float modulateGround(vec2 p) {
 }
 
 vec3 getGround(vec3 rayPos, vec3 rayDir, inout uint rngState) {
-    vec3 g1 = GROUND;
-    vec3 g2 = GROUND_ALT;
+    vec3 g1 = GROUND_COL;
+    vec3 g2 = GROUND_ACCENT_COL;
 
     float t = -(rayPos.z - HEIGHT) / rayDir.z;
     vec2 pt = rayPos.xy + rayDir.xy * t;
@@ -190,8 +171,8 @@ vec3 getGround(vec3 rayPos, vec3 rayDir, inout uint rngState) {
 
 vec3 environmentAlt(vec3 n) {
     vec3 col;
-    vec3 ground = GROUND;
-    vec3 sky = SKY;
+    vec3 ground = GROUND_COL;
+    vec3 sky = SKY_COL;
     float skyGroundBlend = smoothstep(-0.99, -0.95, n.z);
     col = mix(ground, sky, skyGroundBlend);
 
@@ -225,30 +206,18 @@ vec3 sphToCart(float theta, float phi) {
 
 vec3 environment(vec3 rayPos, vec3 rayDir, inout uint rngState) {
     vec3 col;
-    // vec3 ground = GROUND;
     vec3 ground = getGround(rayPos, rayDir, rngState);
-    vec3 mid = MID;
-    vec3 sky = SKY;
-    float midGroundBlend = smoothstep(-0.99, -0.95, rayDir.z);
+    vec3 mid = HORIZON_COL;
+    vec3 sky = SKY_COL;
+    float midGroundBlend = smoothstep(-0.999, -0.998, rayDir.z);
     float skyMidBlend = smoothstep(-0.2, 0.2, rayDir.z);
     col = mix(ground, mid, midGroundBlend);
     col = mix(col, sky, skyMidBlend);
 
-    #if 0
-    col = ground;
-    float tBlend = step(rayDir.x, 0.0);
-    // float tBlend = step(mod(rayDir.x, 0.002), 0.001);
-    vec3 col55 = vec3(1.,1.,1.) * 0.1;
-    col = mix(col55, col, tBlend);
-    #endif
-
     vec3 lightDir;
-    lightDir = sphToCart(1.58 * PI / 2., ANGLE_OFFSET);
-    col += light(rayDir, COLOR_1, lightDir, 0.8, 0.9);
-    lightDir = sphToCart(0.43 * PI / 2., TAU / 3. + ANGLE_OFFSET);
-    col += light(rayDir, COLOR_2, lightDir, 0.8, 0.9);
-    lightDir = sphToCart(PI / 2., 2. * TAU / 3. + ANGLE_OFFSET);
-    col += light(rayDir, COLOR_3, lightDir, 0.8, 0.9);
+    col += light(rayDir, LIGHT_1_COL, LIGHT_1_DIR, 0.83, 0.88);
+    col += light(rayDir, LIGHT_2_COL, LIGHT_2_DIR, 0.83, 0.88);
+    col += light(rayDir, LIGHT_3_COL, LIGHT_3_DIR, 0.83, 0.88);
     return col;
 }
 
