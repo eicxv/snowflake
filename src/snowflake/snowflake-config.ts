@@ -9,6 +9,24 @@ export interface SnowflakeControlConfig {
   renderBlendReset: number | null;
 }
 
+export interface SnowflakeGeneratorConfig {
+  maxGrowthCycles: number;
+  preferredMinSnowflakePercentage: number;
+  maxSnowflakePercentage: number;
+  envChangeChance: number;
+  latticeLongRadius: number;
+  environmentTransitionSteps: number;
+  environmentTransitionStepInterval: number;
+}
+
+export interface SnowflakeAnimationConfig {
+  growthPerFrame: number;
+  samplesPerFrame: number;
+  samplesPerGrowthCycles: number;
+  blendReset: number;
+  drawInterval: number;
+}
+
 interface Overwrite {
   [key: string]: string;
 }

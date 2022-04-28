@@ -1,27 +1,11 @@
 import {
+  SnowflakeAnimationConfig,
+  SnowflakeGeneratorConfig,
   SnowflakeSimConfig,
   SnowflakeUniforms,
   SnowflakeVisConfig,
 } from "./snowflake-config";
 import { SnowflakeDriver } from "./snowflake-driver";
-
-export interface SnowflakeGeneratorConfig {
-  maxGrowthCycles: number;
-  preferredMinSnowflakePercentage: number;
-  maxSnowflakePercentage: number;
-  envChangeChance: number;
-  latticeLongRadius: number;
-  environmentTransitionSteps: number;
-  environmentTransitionStepInterval: number;
-}
-
-export interface SnowflakeAnimationConfig {
-  growthPerFrame: number;
-  samplesPerFrame: number;
-  samplesPerGrowthCycles: number;
-  blendReset: number;
-  drawInterval: number;
-}
 
 interface Event {
   time: number;
@@ -342,7 +326,9 @@ const gKappa = expone(0.15, 4);
 const gMu = expone(0.15, 4);
 const gGamma = expone(0.1, 4);
 
-export function generateParameters(): SnowflakeSimConfig {
+export function generateParameters(
+  latticeLongRadius = 500
+): SnowflakeSimConfig {
   return {
     rho: gRho(),
     beta: gBeta(),
@@ -353,6 +339,6 @@ export function generateParameters(): SnowflakeSimConfig {
     gamma: gGamma(),
     sigma: 0,
     nu: 1,
-    latticeLongRadius: 500,
+    latticeLongRadius,
   };
 }

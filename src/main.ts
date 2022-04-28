@@ -2,14 +2,13 @@ import { displayError } from "./display-error";
 import { generateOverwrites } from "./snowflake/color-generator";
 import { createKeyHandler, setCanvasSize } from "./snowflake/handle-input";
 import {
-  SnowflakeControlConfig,
+  SnowflakeAnimationConfig,
+  SnowflakeGeneratorConfig,
   SnowflakeVisConfig,
 } from "./snowflake/snowflake-config";
 import {
   generateParameters,
-  SnowflakeAnimationConfig,
   SnowflakeController,
-  SnowflakeGeneratorConfig,
 } from "./snowflake/snowflake-controller";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
 import { CameraSettings } from "./webgl/camera/camera";
@@ -24,20 +23,6 @@ const cameraSettings: CameraSettings = {
   up: [0, 1, 0],
 };
 
-const visConfig: SnowflakeVisConfig = {
-  resolution: [1000, 1000],
-  samples: 300,
-  cameraSettings,
-  overwrites: { pathTrace: generateOverwrites() },
-};
-
-const controlConfig: SnowflakeControlConfig = {
-  growSteps: 20000,
-  growStepPerCycle: 10,
-  renderStepsPerCycle: 50,
-  renderBlendReset: 50,
-};
-
 const animationConfig: SnowflakeAnimationConfig = {
   growthPerFrame: 100,
   drawInterval: 200,
@@ -46,7 +31,15 @@ const animationConfig: SnowflakeAnimationConfig = {
   blendReset: 10,
 };
 
-const simConfig = generateParameters();
+const visConfig: SnowflakeVisConfig = {
+  resolution: [1000, 1000],
+  samples: 300,
+  cameraSettings,
+  overwrites: { pathTrace: generateOverwrites() },
+};
+
+const simLatticeRadius = 500;
+const simConfig = generateParameters(simLatticeRadius);
 
 const generatorConfig: SnowflakeGeneratorConfig = {
   maxGrowthCycles: 60000,
@@ -68,7 +61,7 @@ function main(): void {
   setCanvasSize(canvas, res);
   let driver: SnowflakeDriver;
   try {
-    driver = new SnowflakeDriver(canvas, controlConfig, simConfig, visConfig);
+    driver = new SnowflakeDriver(canvas, simConfig, visConfig);
   } catch (err) {
     if (
       err instanceof WebglCreationError ||
