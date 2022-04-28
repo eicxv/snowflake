@@ -81,7 +81,7 @@ const Material iceMaterial = Material(
     1.309,                        // IOR
     1. / 1.309,                   // invIOR
     1.,                           // refractionChance
-    0.01 * 0.01,                  // refractionRoughness
+    0.1 * 0.01,                  // refractionRoughness
     vec3(0.0, 0.0, 0.0)           // refractionColor
 );
 
