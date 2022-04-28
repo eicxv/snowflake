@@ -47,7 +47,6 @@ export interface SnowflakeSimConfig {
   sigma: number; // noise phase; size of perturbation in vapor density
   nu: number; // environment change; vapor multiplier d' = d * nu
   latticeLongRadius: number; // size of hexagonal lattice
-  steps: number; // number of simulation iterations
 }
 
 export interface SnowflakeSimulationUniforms extends Uniforms {
@@ -87,7 +86,6 @@ export const simConfigTest: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 500,
 };
 
 export const fig9aSimConfig: SnowflakeSimConfig = {
@@ -101,7 +99,6 @@ export const fig9aSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 1000,
 };
 
 export const fig9fSimConfig: SnowflakeSimConfig = {
@@ -115,7 +112,6 @@ export const fig9fSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 200,
 };
 
 export const fig13rSimConfig: SnowflakeSimConfig = {
@@ -129,7 +125,6 @@ export const fig13rSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 2000,
 };
 
 export const fig12eSimConfig: SnowflakeSimConfig = {
@@ -143,7 +138,6 @@ export const fig12eSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 2000,
 };
 
 export const fig12bSimConfig: SnowflakeSimConfig = {
@@ -157,7 +151,6 @@ export const fig12bSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 2000,
 };
 
 export const stellarDendriteSimConfig: SnowflakeSimConfig = {
@@ -171,7 +164,6 @@ export const stellarDendriteSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 701,
-  steps: 6000,
 };
 
 export const fernlikeSimConfig: SnowflakeSimConfig = {
@@ -185,7 +177,6 @@ export const fernlikeSimConfig: SnowflakeSimConfig = {
   sigma: 0,
   nu: 1,
   latticeLongRadius: 500,
-  steps: 3000,
 };
 
 export const simConfig1: SnowflakeSimConfig = {
@@ -198,7 +189,6 @@ export const simConfig1: SnowflakeSimConfig = {
   gamma: 0.023478737095792998,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };
 
@@ -212,7 +202,6 @@ export const simConfig2: SnowflakeSimConfig = {
   gamma: 0.05689121117213143,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };
 export const simConfig3: SnowflakeSimConfig = {
@@ -225,7 +214,6 @@ export const simConfig3: SnowflakeSimConfig = {
   gamma: 0.004327283329103165,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };
 export const simConfig4: SnowflakeSimConfig = {
@@ -238,7 +226,6 @@ export const simConfig4: SnowflakeSimConfig = {
   gamma: 0.015600386596224114,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };
 export const simConfig5: SnowflakeSimConfig = {
@@ -251,7 +238,6 @@ export const simConfig5: SnowflakeSimConfig = {
   gamma: 0.040810599314806184,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };
 export const simConfig6: SnowflakeSimConfig = {
@@ -264,6 +250,5 @@ export const simConfig6: SnowflakeSimConfig = {
   gamma: 0.002619350913804444,
   sigma: 0,
   nu: 1,
-  steps: 4000,
   latticeLongRadius: 600,
 };

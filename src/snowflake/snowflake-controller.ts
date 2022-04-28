@@ -353,7 +353,6 @@ export function generateParameters(): SnowflakeSimConfig {
     gamma: gGamma(),
     sigma: 0,
     nu: 1,
-    steps: 4000,
     latticeLongRadius: 500,
   };
 }

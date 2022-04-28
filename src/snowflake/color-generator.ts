@@ -221,7 +221,6 @@ function sphericalToCartesian([r, theta, phi]: Vector3): Vector3 {
 
 function random(min = 0, max = 1): number {
   return Math.random() * (max - min) + min;
-  // return 0.5 * (max - min) + min;
 }
 
 function generateLightDirections(): Record<string, Vector3> {
