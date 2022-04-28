@@ -49,3 +49,23 @@ function logMassFunction(): (driver: SnowflakeDriver, change: boolean) => void {
 }
 
 export const logMass = logMassFunction();
+
+function saveBlob(blob: Blob, fileName: string): void {
+  const a = document.createElement("a");
+  const url = window.URL.createObjectURL(blob);
+  a.href = url;
+  a.download = fileName;
+  a.click();
+}
+
+export function captureCanvas(
+  canvas: HTMLCanvasElement,
+  fileName: string
+): void {
+  canvas.toBlob((blob: Blob | null) => {
+    if (!blob) {
+      return;
+    }
+    saveBlob(blob, fileName);
+  });
+}

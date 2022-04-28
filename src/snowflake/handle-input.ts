@@ -1,4 +1,5 @@
 import { SnowflakeController } from "./snowflake-controller";
+import { captureCanvas } from "./utils";
 
 export function setCanvasSize(canvas: HTMLElement, resolution: number): void {
   canvas.style.width = `${resolution}px`;
@@ -24,26 +25,6 @@ function saveImage(controller: SnowflakeController): void {
   const res = controller.driver.snowflake.visConfig.resolution[0];
   const fileName = `snowflake-${res}px.png`;
   captureCanvas(canvas, fileName);
-}
-
-function saveBlob(blob: Blob, fileName: string): void {
-  const a = document.createElement("a");
-  const url = window.URL.createObjectURL(blob);
-  a.href = url;
-  a.download = fileName;
-  a.click();
-}
-
-export function captureCanvas(
-  canvas: HTMLCanvasElement,
-  fileName: string
-): void {
-  canvas.toBlob((blob: Blob | null) => {
-    if (!blob) {
-      return;
-    }
-    saveBlob(blob, fileName);
-  });
 }
 
 export function createKeyHandler(
