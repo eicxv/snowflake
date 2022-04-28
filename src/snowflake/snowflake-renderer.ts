@@ -93,6 +93,13 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
     return variables;
   }
 
+  changeResolution(resolution: number): void {
+    this.visConfig.resolution = [resolution, resolution];
+    this.variables = { ...this.variables, ...this.createVisVariables() };
+    this.uniforms.u_renderTexture = this.variables.render.getTexture();
+    this.uniforms.u_normalTexture = this.variables.normal.getTexture();
+  }
+
   normal(): void {
     const [width, height] = this.variables.lattice.resolution;
     this.gl.viewport(0, 0, width, height);

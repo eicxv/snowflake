@@ -30,6 +30,7 @@ export interface PathTraceOverwrite extends Overwrite {
 export interface SnowflakeVisConfig {
   resolution: [number, number];
   cameraSettings: CameraSettings;
+  samples: number;
   overwrites?: {
     pathTrace?: Overwrite;
   };
