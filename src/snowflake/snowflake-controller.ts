@@ -4,7 +4,6 @@ import {
   SnowflakeVisConfig,
 } from "./snowflake-config";
 import { SnowflakeDriver } from "./snowflake-driver";
-import { generateParameters } from "./snowflake-generator";
 
 export interface SnowflakeGeneratorConfig {
   maxGrowthCycles: number;
@@ -325,4 +324,36 @@ export class SnowflakeController {
     const dr = this.getGrowthRate();
     return { radius: r, time: t, growthRate: dr };
   }
+}
+
+function uniform(a = 0, b = 1): () => number {
+  return () => Math.random() * (b - a) + a;
+}
+
+function expone(a: number, b: number): () => number {
+  return () => a * Math.exp(-b * Math.random());
+}
+
+const gRho = uniform(0.45, 0.8);
+const gBeta = uniform(1.06, 3.2);
+const gAlpha = expone(0.6, 2);
+const gTheta = expone(0.12, 4);
+const gKappa = expone(0.15, 4);
+const gMu = expone(0.15, 4);
+const gGamma = expone(0.1, 4);
+
+export function generateParameters(): SnowflakeSimConfig {
+  return {
+    rho: gRho(),
+    beta: gBeta(),
+    alpha: gAlpha(),
+    theta: gTheta(),
+    kappa: gKappa(),
+    mu: gMu(),
+    gamma: gGamma(),
+    sigma: 0,
+    nu: 1,
+    steps: 4000,
+    latticeLongRadius: 500,
+  };
 }

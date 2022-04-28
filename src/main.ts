@@ -6,12 +6,12 @@ import {
   SnowflakeVisConfig,
 } from "./snowflake/snowflake-config";
 import {
+  generateParameters,
   SnowflakeAnimationConfig,
   SnowflakeController,
   SnowflakeGeneratorConfig,
 } from "./snowflake/snowflake-controller";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
-import { generateParameters } from "./snowflake/snowflake-generator";
 import { CameraSettings } from "./webgl/camera/camera";
 import { ExtensionUnavailableError, WebglCreationError } from "./webgl/errors";
 
