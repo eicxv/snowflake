@@ -122,6 +122,7 @@ function genSaturation(
   const lightSat = 50;
   let groundSat = 40;
   let accentSat = 30;
+  let skySat = 20;
   if (
     lightness === Lightness.White ||
     lightness === Lightness.Pastel ||
@@ -130,13 +131,16 @@ function genSaturation(
     groundSat = 25;
     accentSat = 15;
   }
+  if (lightness === Lightness.White) {
+    skySat = 0;
+  }
   colors.LIGHT_1_COL.hsl[1] = lightSat;
   colors.LIGHT_2_COL.hsl[1] = lightSat;
   colors.LIGHT_3_COL.hsl[1] = lightSat;
   colors.GROUND_COL.hsl[1] = groundSat;
   colors.GROUND_ACCENT_COL.hsl[1] = accentSat;
   colors.HORIZON_COL.hsl[1] = groundSat;
-  colors.SKY_COL.hsl[1] = groundSat;
+  colors.SKY_COL.hsl[1] = skySat;
 }
 
 function genMultiplier(
@@ -162,14 +166,14 @@ function genMultiplier(
     case Lightness.Standard:
       break;
   }
-  const groundMult = random(0.08, 0.18);
+  const groundMult = random(0.1, 0.18);
   colors.LIGHT_1_COL.scale = lightMultipliers[0];
   colors.LIGHT_2_COL.scale = lightMultipliers[1];
   colors.LIGHT_3_COL.scale = lightMultipliers[2];
   colors.GROUND_COL.scale = groundMult;
-  colors.GROUND_ACCENT_COL.scale = groundMult * 0.5;
+  colors.GROUND_ACCENT_COL.scale = groundMult * 0.6;
   colors.HORIZON_COL.scale = groundMult * 1.25;
-  colors.SKY_COL.scale = groundMult * 1.25;
+  colors.SKY_COL.scale = groundMult * 2.25;
 }
 
 function genLightness(colors: ColorDataCollection, lightness: Lightness): void {
@@ -196,7 +200,7 @@ function sampleArrayWeighted<T>(arr: ArrayLike<T>, weights: Array<number>): T {
 }
 
 function sampleArray<T>(arr: ArrayLike<T>): T {
-  const index = Math.floor(Math.random() * arr.length);
+  const index = Math.floor(random() * arr.length);
   return arr[index];
 }
 
@@ -217,10 +221,11 @@ function sphericalToCartesian([r, theta, phi]: Vector3): Vector3 {
 
 function random(min = 0, max = 1): number {
   return Math.random() * (max - min) + min;
+  // return 0.5 * (max - min) + min;
 }
 
 function generateLightDirections(): Record<string, Vector3> {
-  const angleOffset = Math.random() * 2 * Math.PI;
+  const angleOffset = random(0, 2 * Math.PI);
   const directions = {
     LIGHT_1_DIR: sphericalToCartesian([1, (0.43 * Math.PI) / 2, angleOffset]),
     LIGHT_2_DIR: sphericalToCartesian([
