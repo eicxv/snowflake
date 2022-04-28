@@ -1,7 +1,7 @@
 html {
     margin: 0;
     padding: 0;
-    background: #fff;
+    background: #111111;
 }
 
 body {
@@ -10,8 +10,9 @@ body {
 }
 
 canvas {
-    width: 500px;
-    height: 500px;
+    width: 2000px;
+    height: 2000px;
+    display: block;
     margin: 0 auto;
 }
 
