@@ -48,6 +48,11 @@ function logMassFunction(): (driver: SnowflakeDriver, change: boolean) => void {
   return logMass;
 }
 
+export function random(min = 0, max = 1): number {
+  // return Math.random() * (max - min) + min;
+  return fxrand() * (max - min) + min;
+}
+
 export const logMass = logMassFunction();
 
 function saveBlob(blob: Blob, fileName: string): void {
