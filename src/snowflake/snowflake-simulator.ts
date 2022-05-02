@@ -94,6 +94,13 @@ export class SnowflakeSimulator {
     return variables;
   }
 
+  resetLattice(): void {
+    this.variables = {
+      ...this.variables,
+      ...this.createVariables(),
+    };
+  }
+
   private calcSimResolution(): [number, number] {
     const x = this.simConfig.latticeLongRadius;
     const y = Math.ceil(x / 2) + 1;
@@ -162,7 +169,7 @@ export class SnowflakeSimulator {
     return this.findFirstNonFrozenCell(buffer);
   }
 
-  private findFirstNonFrozenCell(values: ArrayLike<number>): number {
+  protected findFirstNonFrozenCell(values: ArrayLike<number>): number {
     let left = 0;
     let right = values.length / 4 - 1;
     const target = 0;
@@ -244,12 +251,8 @@ export class SnowflakeSimulator {
     const framebuffers = textures.map((texture) =>
       createFramebuffer(gl, texture)
     );
-    const concentrationVariable = new ComputeVariable(
-      textures,
-      framebuffers,
-      resolution
-    );
-    return concentrationVariable;
+    const variable = new ComputeVariable(textures, framebuffers, resolution);
+    return variable;
   }
 
   private createTexture(

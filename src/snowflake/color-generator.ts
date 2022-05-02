@@ -1,5 +1,6 @@
 import { vec3 } from "gl-matrix";
 import { hsluvToLch, lchToLuv, luvToXyz } from "hsluv";
+import { random } from "./utils";
 
 type Vector3 = [number, number, number];
 
@@ -9,7 +10,7 @@ enum Lightness {
   Standard = 50,
 }
 
-enum ColorHarmony {
+enum Harmony {
   Monochrome,
   Analogous,
   Triad,
@@ -43,15 +44,15 @@ function initColors(colorNames: string[]): ColorDataCollection {
   return colors;
 }
 
-function chooseSettings(): [ColorHarmony, Lightness] {
-  const harmonyWeights = [0.1, 0.3, 0.3, 0.3];
-  const lightWeights = [0.05, 0.3, 0.65];
+function chooseSettings(): [Harmony, Lightness] {
+  const harmonyWeights = [0.1, 0.25, 0.3, 0.35];
+  const lightWeights = [0.05, 0.25, 0.7];
   const harmony = sampleArrayWeighted(
     [
-      ColorHarmony.Monochrome,
-      ColorHarmony.Analogous,
-      ColorHarmony.Triad,
-      ColorHarmony.Complementary,
+      Harmony.Monochrome,
+      Harmony.Analogous,
+      Harmony.Triad,
+      Harmony.Complementary,
     ],
     harmonyWeights
   );
@@ -59,6 +60,7 @@ function chooseSettings(): [ColorHarmony, Lightness] {
     [Lightness.White, Lightness.Pastel, Lightness.Standard],
     lightWeights
   );
+  console.log(Harmony[harmony], Lightness[lightness]);
   return [harmony, lightness];
 }
 
@@ -86,21 +88,21 @@ function generateColors(): Record<string, Vector3> {
   return colors;
 }
 
-function genHues(colors: ColorDataCollection, harmony: ColorHarmony): void {
+function genHues(colors: ColorDataCollection, harmony: Harmony): void {
   const baseHue = random(0, 360);
   let groundHue = baseHue;
   let offset: number;
   switch (harmony) {
-    case ColorHarmony.Monochrome:
+    case Harmony.Monochrome:
       offset = random(0, 30);
       break;
-    case ColorHarmony.Analogous:
+    case Harmony.Analogous:
       offset = random(30, 80);
       break;
-    case ColorHarmony.Triad:
+    case Harmony.Triad:
       offset = random(80, 130);
       break;
-    case ColorHarmony.Complementary:
+    case Harmony.Complementary:
       offset = random(130, 180);
       groundHue += 180;
   }
@@ -117,21 +119,19 @@ function genHues(colors: ColorDataCollection, harmony: ColorHarmony): void {
 function genSaturation(
   colors: ColorDataCollection,
   lightness: Lightness,
-  harmony: ColorHarmony
+  harmony: Harmony
 ): void {
   const lightSat = 50;
-  let groundSat = 40;
-  let accentSat = 30;
+  let groundSat = 35;
+  let accentSat = 25;
   let skySat = 20;
-  if (
-    lightness === Lightness.White ||
-    lightness === Lightness.Pastel ||
-    harmony === ColorHarmony.Monochrome
-  ) {
+  if (lightness === Lightness.Pastel || harmony === Harmony.Monochrome) {
     groundSat = 25;
     accentSat = 15;
   }
   if (lightness === Lightness.White) {
+    groundSat = 15;
+    accentSat = 5;
     skySat = 0;
   }
   colors.LIGHT_1_COL.hsl[1] = lightSat;
@@ -146,15 +146,22 @@ function genSaturation(
 function genMultiplier(
   colors: ColorDataCollection,
   lightness: Lightness,
-  harmony: ColorHarmony
+  harmony: Harmony
 ): void {
   let lightMultipliers: Vector3;
-  if (harmony === ColorHarmony.Monochrome || lightness === Lightness.White) {
-    lightMultipliers = [12.2, 1.2, 0.6];
-  } else if (harmony === ColorHarmony.Complementary) {
-    lightMultipliers = [10.5, 6.75, 6.75];
+  if (harmony === Harmony.Monochrome || lightness === Lightness.White) {
+    lightMultipliers = [12.2, 1.2, 0.6]; // check for luminance
+  } else if (harmony === Harmony.Complementary) {
+    // lightMultipliers = [10.5, 6.75, 6.75];
+    // lightMultipliers = [8.5, 9, 7];
+    lightMultipliers = [8.5, 8, 8.5]; // check for luminance
+    // lightMultipliers = [0, 0, 10];
+  } else if (harmony === Harmony.Triad) {
+    // lightMultipliers = [9, 7, 0];
+    lightMultipliers = [9.5, 7, 6.5];
   } else {
-    lightMultipliers = [9, 7.5, 7.5];
+    // lightMultipliers = [8, 10, 7];
+    lightMultipliers = [9, 7.5, 7.5]; // check for luminance
   }
   switch (lightness) {
     case Lightness.White:
@@ -166,14 +173,15 @@ function genMultiplier(
     case Lightness.Standard:
       break;
   }
-  const groundMult = random(0.1, 0.18);
+
+  const groundMult = random(0.12, 0.28);
   colors.LIGHT_1_COL.scale = lightMultipliers[0];
   colors.LIGHT_2_COL.scale = lightMultipliers[1];
   colors.LIGHT_3_COL.scale = lightMultipliers[2];
   colors.GROUND_COL.scale = groundMult;
   colors.GROUND_ACCENT_COL.scale = groundMult * 0.6;
   colors.HORIZON_COL.scale = groundMult * 1.25;
-  colors.SKY_COL.scale = groundMult * 2.25;
+  colors.SKY_COL.scale = groundMult * 1.5;
 }
 
 function genLightness(colors: ColorDataCollection, lightness: Lightness): void {
@@ -219,17 +227,14 @@ function sphericalToCartesian([r, theta, phi]: Vector3): Vector3 {
   return [x, y, z];
 }
 
-function random(min = 0, max = 1): number {
-  return Math.random() * (max - min) + min;
-}
-
 function generateLightDirections(): Record<string, Vector3> {
   const angleOffset = random(0, 2 * Math.PI);
   const directions = {
     LIGHT_1_DIR: sphericalToCartesian([1, (0.43 * Math.PI) / 2, angleOffset]),
     LIGHT_2_DIR: sphericalToCartesian([
       1,
-      (random(0.7, 1.3) * Math.PI) / 2,
+      (0.6 * Math.PI) / 2,
+      // (random(0.7, 1.3) * Math.PI) / 2,
       (2 * Math.PI) / 3 + angleOffset,
     ]),
     LIGHT_3_DIR: sphericalToCartesian([
@@ -267,23 +272,4 @@ export function generateOverwrites(): Record<string, string> {
     overwrites[key] = toGlsl(value);
   });
   return overwrites;
-}
-
-// create function to take a series of colors and create divs with the colors and add them to the body
-function showColors(colors: string[]): void {
-  const body = document.querySelector("body");
-  if (!body) {
-    return;
-  }
-  const container = document.createElement("div");
-  container.style.display = "flex";
-  container.style.marginBottom = "4rem";
-  colors.forEach((color) => {
-    const div = document.createElement("div");
-    div.style.backgroundColor = color;
-    div.style.width = "100px";
-    div.style.height = "100px";
-    container.appendChild(div);
-  });
-  body.appendChild(container);
 }

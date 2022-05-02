@@ -21,6 +21,7 @@
   "dependencies": {
     "gl-matrix": "^3.4.3",
     "hsluv": "^0.1.0",
-    "iter-tools": "^7.3.1"
+    "iter-tools": "^7.3.1",
+    "ml-random-forest": "^2.1.0"
   }
 }

@@ -23,7 +23,7 @@ function saveImage(controller: SnowflakeController): void {
   controller.driver.snowflake.display();
   const canvas = controller.driver.gl.canvas;
   const res = controller.driver.snowflake.visConfig.resolution[0];
-  const fileName = `snowflake-${res}px.png`;
+  const fileName = `snowflake-${fxhash}-${res}px.png`;
   captureCanvas(canvas, fileName);
 }
 
@@ -35,9 +35,13 @@ export function createKeyHandler(
       case "r":
         setResolution(controller);
         if (!controller.animating) {
-          controller.queueDraw(300);
+          controller.queueDraw(2);
           controller.startAnimation();
         }
+        // if (!controller.animating) {
+        //   controller.queueDraw(300);
+        //   controller.startAnimation();
+        // }
         break;
       case "q":
         controller.queueDraw(300);
@@ -51,6 +55,31 @@ export function createKeyHandler(
         break;
       case "v":
         controller.driver.snowflake.visualize();
+        break;
+      case "d":
+        controller.finalRender();
+        break;
+      case "n":
+        controller.driver.snowflake.displayTest();
+        break;
+      // case "m":
+      //   const [boundaryLengthPerArea, boundaryLength, area] =
+      //     controller.driver.snowflake.boundaryLength();
+
+      //   const blend = Number(
+      //     prompt(
+      //       `Current value ${controller.driver.uniforms.u_normalBlend}`,
+      //       estimateNormalBlend(boundaryLengthPerArea).toString()
+      //     )
+      //   );
+      //   if (blend > 1 || blend < 0) {
+      //     alert("Invalid value");
+      //     break;
+      //   }
+      //   controller.driver.uniforms.u_normalBlend = blend;
+      //   controller.driver.snowflake.renderStep = 0;
+      //   controller.interpolated = false;
+      //   break;
       default:
         break;
     }

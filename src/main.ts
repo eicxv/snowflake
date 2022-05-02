@@ -1,15 +1,14 @@
 import { displayError } from "./display-error";
 import { generateOverwrites } from "./snowflake/color-generator";
+import { generateParameters } from "./snowflake/generate-parameters";
 import { createKeyHandler, setCanvasSize } from "./snowflake/handle-input";
 import {
+  fernlikeSimConfig,
   SnowflakeAnimationConfig,
   SnowflakeGeneratorConfig,
   SnowflakeVisConfig,
 } from "./snowflake/snowflake-config";
-import {
-  generateParameters,
-  SnowflakeController,
-} from "./snowflake/snowflake-controller";
+import { SnowflakeController } from "./snowflake/snowflake-controller";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
 import { CameraSettings } from "./webgl/camera/camera";
 import { ExtensionUnavailableError, WebglCreationError } from "./webgl/errors";
@@ -26,10 +25,15 @@ const cameraSettings: CameraSettings = {
 const animationConfig: SnowflakeAnimationConfig = {
   growthPerFrame: 100,
   drawInterval: 200,
-  samplesPerFrame: 10,
+  samplesPerFrame: 5,
   samplesPerGrowthCycles: 20,
   blendReset: 10,
 };
+
+const simLatticeRadius = 600;
+const sc = fernlikeSimConfig;
+sc.latticeLongRadius = simLatticeRadius;
+const simConfig = generateParameters(simLatticeRadius);
 
 const visConfig: SnowflakeVisConfig = {
   resolution: [1000, 1000],
@@ -38,11 +42,10 @@ const visConfig: SnowflakeVisConfig = {
   overwrites: { pathTrace: generateOverwrites() },
 };
 
-const simLatticeRadius = 500;
-const simConfig = generateParameters(simLatticeRadius);
+// const simConfig = sc;
 
 const generatorConfig: SnowflakeGeneratorConfig = {
-  maxGrowthCycles: 60000,
+  maxGrowthCycles: 80000,
   preferredMinSnowflakePercentage: 0.3,
   maxSnowflakePercentage: 0.7,
   envChangeChance: 0.2,
@@ -81,17 +84,9 @@ function main(): void {
   );
 
   document.addEventListener("keydown", createKeyHandler(controller));
-
+  // createDataset(driver, 500);
+  // testColors();
   controller.startAnimation();
-}
-
-function rndr(driver: SnowflakeDriver): void {
-  const sf = driver.snowflake;
-  sf.grow(10000);
-  sf.interpolate();
-  sf.pathTrace(300);
-  sf.display();
-  // sf.visualize();
 }
 
 main();

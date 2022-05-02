@@ -1,3 +1,4 @@
+import { generateParameters } from "./generate-parameters";
 import {
   SnowflakeAnimationConfig,
   SnowflakeGeneratorConfig,
@@ -6,6 +7,7 @@ import {
   SnowflakeVisConfig,
 } from "./snowflake-config";
 import { SnowflakeDriver } from "./snowflake-driver";
+import { random } from "./utils";
 
 interface Event {
   time: number;
@@ -47,27 +49,53 @@ class DrawEvent implements Event {
   }
 }
 
-class GrowthEvent implements Event {
+class GrowthControlEvent implements Event {
   controller: SnowflakeController;
   time: number;
+  maxTime = 0;
   interval: number;
   active = true;
+  maxInterval = 5000;
 
   constructor(controller: SnowflakeController, interval: number) {
     this.controller = controller;
     this.time = 0;
     this.interval = interval;
+    this.maxTime = controller.maxTime;
   }
 
   run(): void {
-    this.time += this.interval;
-    const radius = this.controller.driver.getRadius();
-    const time = this.controller.driver.growthCount;
-    console.log(radius);
-    if (radius > this.controller.maxRadius || time >= this.controller.maxTime) {
+    const { time, radius, growthRate } = this.controller.updateGrowth();
+    if (
+      radius >= this.controller.maxRadius ||
+      time >= this.controller.maxTime
+    ) {
       this.controller.finalRender();
       this.active = false;
+      console.log("done", radius);
     }
+    const dist = this.controller.maxRadius - radius;
+    const remainingTime = this.maxTime - time;
+    const envChange = this.controller.events.environmentChange;
+    let nextInterval;
+    if (isFinite(growthRate)) {
+      let estTime = Math.ceil(dist / growthRate);
+
+      if (estTime > remainingTime && !envChange.active) {
+        // console.log("startEnvChange");
+        // envChange.time = this.time;
+        // envChange.active = true;
+        nextInterval = dist;
+      } else {
+        if (envChange.active) {
+          estTime = Math.min(dist * 10, estTime);
+        }
+        nextInterval = Math.max(dist, estTime);
+      }
+    } else {
+      nextInterval = dist;
+    }
+    this.time += Math.min(nextInterval, this.maxInterval, remainingTime);
   }
 }
 
@@ -76,8 +104,8 @@ class EnvironmentChangeEvent implements Event {
   time: number;
   interval: number;
   stepInterval: number;
-  active = true;
-  mu: number;
+  active = false;
+  nu: number;
   private step = 0;
   private transisitionSteps;
   private targetConfig: SnowflakeSimConfig | null = null;
@@ -91,7 +119,7 @@ class EnvironmentChangeEvent implements Event {
     this.time = this.interval;
     this.stepInterval = genConfig.environmentTransitionStepInterval;
     this.transisitionSteps = genConfig.environmentTransitionSteps;
-    this.mu = Math.pow(1.7, 1 / this.transisitionSteps);
+    this.nu = Math.pow(1.7, 1 / this.transisitionSteps);
   }
 
   run(): void {
@@ -100,6 +128,10 @@ class EnvironmentChangeEvent implements Event {
       this.targetConfig = generateParameters();
       this.removeZeros(this.targetConfig, this.controller.driver.uniforms);
       this.step = this.transisitionSteps;
+      this.controller.inEnvironmentChange = true;
+      if (random() > 0.5) {
+        this.controller.driver.uniforms.u_nu = this.nu;
+      }
     }
     this.interpolateUniforms(
       this.targetConfig,
@@ -107,13 +139,20 @@ class EnvironmentChangeEvent implements Event {
       this.step,
       this.transisitionSteps
     );
-    // this.controller.driver.uniforms.u_mu = this.mu;
-    // this.controller.driver.snowflake.environmentChange();
+
+    if (this.controller.driver.uniforms.u_nu !== 1) {
+      this.controller.driver.snowflake.environmentChange();
+    }
 
     this.step -= 1;
     if (this.step === 0) {
+      this.controller.driver.uniforms.u_nu = 1;
       this.targetConfig = null;
-      this.time += this.interval;
+      this.active = false;
+      this.controller.inEnvironmentChange = false;
+      const { time, radius, growthRate } = this.controller.updateGrowth();
+      const dist = this.controller.maxRadius - radius;
+      this.controller.events.growthControl.time = this.time += dist;
     }
   }
 
@@ -121,16 +160,16 @@ class EnvironmentChangeEvent implements Event {
     params: SnowflakeSimConfig,
     uniforms: SnowflakeUniforms
   ): void {
-    params.alpha = Math.max(params.alpha, 0.0001);
-    params.theta = Math.max(params.theta, 0.0001);
-    params.kappa = Math.max(params.kappa, 0.0001);
-    params.mu = Math.max(params.mu, 0.0001);
-    params.gamma = Math.max(params.gamma, 0.0001);
-    uniforms.u_alpha = Math.max(uniforms.u_alpha, 0.0001);
-    uniforms.u_theta = Math.max(uniforms.u_theta, 0.0001);
-    uniforms.u_kappa = Math.max(uniforms.u_kappa, 0.0001);
-    uniforms.u_mu = Math.max(uniforms.u_mu, 0.0001);
-    uniforms.u_gamma = Math.max(uniforms.u_gamma, 0.0001);
+    params.alpha = Math.max(params.alpha, 0.000001);
+    params.theta = Math.max(params.theta, 0.000001);
+    params.kappa = Math.max(params.kappa, 0.000001);
+    params.mu = Math.max(params.mu, 0.000001);
+    params.gamma = Math.max(params.gamma, 0.000001);
+    uniforms.u_alpha = Math.max(uniforms.u_alpha, 0.000001);
+    uniforms.u_theta = Math.max(uniforms.u_theta, 0.000001);
+    uniforms.u_kappa = Math.max(uniforms.u_kappa, 0.000001);
+    uniforms.u_mu = Math.max(uniforms.u_mu, 0.000001);
+    uniforms.u_gamma = Math.max(uniforms.u_gamma, 0.000001);
   }
 
   private interpolateUniforms(
@@ -155,7 +194,11 @@ export class SnowflakeController {
   maxTime: number;
   maxRadius: number;
   minRadius: number;
-  events: Event[];
+  events: {
+    draw: DrawEvent;
+    growthControl: GrowthControlEvent;
+    environmentChange: EnvironmentChangeEvent;
+  };
   interpolated = false;
   terminate = false;
   finalRenderSamples: number;
@@ -163,6 +206,8 @@ export class SnowflakeController {
   aniConfig: SnowflakeAnimationConfig;
   animating = false;
   animateGrowth = true;
+  inEnvironmentChange = false;
+  growth: { time: number; radius: number; growthRate: number };
   private prevRadius = [
     { t: 0, r: 0 },
     { t: 0, r: 0 },
@@ -184,27 +229,20 @@ export class SnowflakeController {
     this.minRadius = Math.ceil(
       config.preferredMinSnowflakePercentage * config.latticeLongRadius
     );
-    this.events = [
-      new DrawEvent(this, this.aniConfig),
-      new GrowthEvent(this, 5000),
-      new EnvironmentChangeEvent(this, config),
-    ];
+    this.events = {
+      draw: new DrawEvent(this, this.aniConfig),
+      growthControl: new GrowthControlEvent(this, 2500),
+      environmentChange: new EnvironmentChangeEvent(this, config),
+    };
     this.queue = { grow: 0, draw: 0, event: null };
+    this.growth = { time: 0, radius: 0, growthRate: 0 };
     this.animate = this.animate.bind(this);
-  }
-
-  removeEvent(event: Event): void {
-    const index = this.events.indexOf(event);
-    this.events.splice(index, 1);
-  }
-
-  addEvent(event: Event): void {
-    this.events.push(event);
   }
 
   finalRender(): void {
     const sf = this.driver.snowflake;
     sf.renderStep = 0;
+    sf.updateNormalBlend();
     this.queueDraw(this.finalRenderSamples);
     this.terminate = true;
   }
@@ -236,10 +274,10 @@ export class SnowflakeController {
     this.queue.event = event;
   }
 
-  private getNextEvent(events: Event[]): Event {
-    const nextEvent = events.reduce(
+  private getNextEvent(): Event {
+    const nextEvent = Object.values(this.events).reduce(
       (prev, curr) => (curr.active && prev.time > curr.time ? curr : prev),
-      { time: Infinity, run: () => false, active: false }
+      { time: Infinity, run: () => false, active: false } as Event
     );
     return nextEvent;
   }
@@ -253,7 +291,7 @@ export class SnowflakeController {
 
   runNextEvent(): void {
     const time = this.driver.growthCount;
-    const nextEvent = this.getNextEvent(this.events);
+    const nextEvent = this.getNextEvent();
     if (!nextEvent.active) {
       return;
     }
@@ -303,42 +341,11 @@ export class SnowflakeController {
     this.animating = false;
   }
 
-  currentGrowth(): { radius: number; time: number; growthRate: number } {
+  updateGrowth(): { radius: number; time: number; growthRate: number } {
     const { r, t } = this.getRadius();
     const dr = this.getGrowthRate();
-    return { radius: r, time: t, growthRate: dr };
+    const growth = { radius: r, time: t, growthRate: dr };
+    this.growth = growth;
+    return growth;
   }
-}
-
-function uniform(a = 0, b = 1): () => number {
-  return () => Math.random() * (b - a) + a;
-}
-
-function expone(a: number, b: number): () => number {
-  return () => a * Math.exp(-b * Math.random());
-}
-
-const gRho = uniform(0.45, 0.8);
-const gBeta = uniform(1.06, 3.2);
-const gAlpha = expone(0.6, 2);
-const gTheta = expone(0.12, 4);
-const gKappa = expone(0.15, 4);
-const gMu = expone(0.15, 4);
-const gGamma = expone(0.1, 4);
-
-export function generateParameters(
-  latticeLongRadius = 500
-): SnowflakeSimConfig {
-  return {
-    rho: gRho(),
-    beta: gBeta(),
-    alpha: gAlpha(),
-    theta: gTheta(),
-    kappa: gKappa(),
-    mu: gMu(),
-    gamma: gGamma(),
-    sigma: 0,
-    nu: 1,
-    latticeLongRadius,
-  };
 }
