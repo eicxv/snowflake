@@ -49,7 +49,6 @@ function logMassFunction(): (driver: SnowflakeDriver, change: boolean) => void {
 }
 
 export function random(min = 0, max = 1): number {
-  // return Math.random() * (max - min) + min;
   return fxrand() * (max - min) + min;
 }
 

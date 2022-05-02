@@ -118,6 +118,8 @@ export class PathTraceProgram extends Program {
     const localUniforms = [
       "u_renderTexture",
       "u_normalTexture",
+      "u_viewMatrix",
+      "u_cameraPosition",
       "u_blend",
       "u_seed",
     ];
@@ -140,20 +142,19 @@ export class PathTraceProgram extends Program {
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniforms;
 
+    gl.uniformMatrix4fv(locations.u_viewMatrix, false, uniforms.u_viewMatrix);
+    gl.uniform3fv(locations.u_cameraPosition, uniforms.u_cameraPosition);
+
     gl.uniform1ui(locations.u_seed, uniforms.u_seed);
     gl.uniform1f(locations.u_blend, uniforms.u_blend);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);
-    gl.uniform1i(locations.u_latticeTexture, 0);
+    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_renderTexture);
+    gl.uniform1i(locations.u_renderTexture, 0);
 
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_renderTexture);
-    gl.uniform1i(locations.u_renderTexture, 1);
-
-    gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_normalTexture);
-    gl.uniform1i(locations.u_normalTexture, 2);
+    gl.uniform1i(locations.u_normalTexture, 1);
   }
 }
 

@@ -84,7 +84,6 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
     const uniforms = {
       u_renderTexture: this.variables.render.getTexture(),
       u_normalTexture: this.variables.normal.getTexture(),
-      u_viewProjectionMatrix: this.camera.viewProjectionMatrix,
       u_viewMatrix: this.camera.viewMatrix,
       u_cameraPosition: this.camera.position,
       u_normalBlend: 0.9,

@@ -1,5 +1,4 @@
 import { mat4, vec3 } from "gl-matrix";
-import { CameraSettings } from "../webgl/camera/camera";
 import { Uniforms } from "../webgl/program";
 
 export interface SnowflakeControlConfig {
@@ -47,7 +46,7 @@ export interface PathTraceOverwrite extends Overwrite {
 
 export interface SnowflakeVisConfig {
   resolution: [number, number];
-  cameraSettings: CameraSettings;
+  viewMatrix: mat4;
   samples: number;
   overwrites?: {
     pathTrace?: Overwrite;
@@ -86,7 +85,7 @@ export interface SnowflakeRenderUniforms extends Uniforms {
   u_normalBlend: number;
   u_blend: number;
   u_seed: number;
-  u_viewProjectionMatrix: mat4;
+  u_viewMatrix: mat4;
   u_cameraPosition: vec3;
 }
 

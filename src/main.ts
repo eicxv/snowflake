@@ -1,3 +1,4 @@
+import { mat4, vec3 } from "gl-matrix";
 import { displayError } from "./display-error";
 import { generateOverwrites } from "./snowflake/color-generator";
 import { generateParameters } from "./snowflake/generate-parameters";
@@ -10,17 +11,12 @@ import {
 } from "./snowflake/snowflake-config";
 import { SnowflakeController } from "./snowflake/snowflake-controller";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
-import { CameraSettings } from "./webgl/camera/camera";
 import { ExtensionUnavailableError, WebglCreationError } from "./webgl/errors";
 
-const cameraSettings: CameraSettings = {
-  position: [1, 0, 0],
-  target: [0, 0, 0],
-  fov: Math.PI / 2,
-  near: 0.01,
-  far: 100,
-  up: [0, 1, 0],
-};
+const position = [0, 0, 600] as vec3;
+const target = [0, 0, 0] as vec3;
+const up = [0, 1, 0] as vec3;
+const viewMatrix = mat4.lookAt(mat4.create(), position, target, up);
 
 const animationConfig: SnowflakeAnimationConfig = {
   growthPerFrame: 100,
@@ -38,7 +34,7 @@ const simConfig = generateParameters(simLatticeRadius);
 const visConfig: SnowflakeVisConfig = {
   resolution: [1000, 1000],
   samples: 300,
-  cameraSettings,
+  viewMatrix,
   overwrites: { pathTrace: generateOverwrites() },
 };
 

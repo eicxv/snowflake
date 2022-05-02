@@ -38,24 +38,15 @@ uniform highp sampler2D u_normalTexture;
 uniform uint u_seed;
 uniform float u_blend;
 
+in vec3 v_rayOrigin;
+in vec3 v_rayTarget;
+
 out vec4 fragColor;
 
 const float c_minRayDist = 0.01;
-
 const float c_rayPosNudge = 0.01;
-
-// the farthest we look for ray hits
 const float c_far = 10000.0;
-
-// camera FOV
-// const float c_FOVDeg = 15.0;
-const float c_FOVDeg = 178.0;
-
-// number of ray bounces allowed max
 const int c_maxBounces = 8;
-
-// how many renders per frame - make this larger to get around the vsync limitation, and get a better image faster.
-const int c_samplesPerFrame = 1;
 
 struct Material {
     float specularChance;      // percentage chance of doing a specular reflection
@@ -135,12 +126,6 @@ vec4 sampleLattice(vec2 uv) {
     return texture(u_normalTexture, uv);
 }
 
-vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
-    return a + b * cos(TAU * (c * t + d));
-}
-
-#define PALETTE vec3(0.5, 0.5, 0.5), vec3(0.5, 0.5, 0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25)
-
 uint iqint3(uvec2 x) {
     uvec2 q = 1103515245u * ((x>>1u) ^ (x.yx));
     uint  n = 1103515245u * ((q.x) ^ (q.y >> 3u));
@@ -184,39 +169,9 @@ vec3 getGround(vec3 rayPos, vec3 rayDir, inout uint rngState) {
     return mix(g1, g2, noise + modulateGround(pt));
 }
 
-vec3 environmentAlt(vec3 n) {
-    vec3 col;
-    vec3 ground = GROUND_COL;
-    vec3 sky = SKY_COL;
-    float skyGroundBlend = smoothstep(-0.99, -0.95, n.z);
-    col = mix(ground, sky, skyGroundBlend);
-
-    float angle = atan(n.y, n.x) / TAU + 0.1357;
-    vec3 rakeLight = pal(angle, PALETTE);
-
-    rakeLight *= 4.;
-    rakeLight *= sin(3. * angle * PI) + 1.;
-
-    float rakeLightHeight = 0.8;
-    float rakeLightOffset = 0.2;
-    float rakeBlend = smoothstep(-rakeLightHeight + rakeLightOffset, 0.0, n.z)
-                     * (1.0 -smoothstep(0.0, rakeLightHeight + rakeLightOffset, n.z));
-    rakeLight = mix(vec3(0.0), rakeLight, rakeBlend);
-    col = max(col, rakeLight);
-    return col;
-}
-
 vec3 light(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
     float blend = smoothstep(a1, a2, dot(rayDir, lightDir));
     return color * blend;
-}
-
-vec3 sphToCart(float theta, float phi) {
-    return vec3(
-            sin(theta) * cos(phi),
-            sin(theta) * sin(phi),
-            cos(theta)
-    );
 }
 
 vec3 environment(vec3 rayPos, vec3 rayDir, inout uint rngState) {
@@ -297,37 +252,6 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     return true;
 }
 
-bool hitSphere(vec3 rayPos, vec3 rayDir, inout HitData hitData, vec4 sphere)
-{
-	vec3 m = rayPos - sphere.xyz;
-	float b = dot(m, rayDir);
-	float c = dot(m, m) - sphere.w * sphere.w;
-
-	if(c > 0.0 && b > 0.0) {
-		return false;
-    }
-
-	float disc = b * b - c;
-	if(disc < 0.0)
-		return false;
-
-    bool fromInside = false;
-	float dist = -b - sqrt(disc);
-    if (dist < 0.0) {
-        fromInside = true;
-        dist = -b + sqrt(disc);
-    }
-
-	if (dist > c_minRayDist && dist < hitData.dist) {
-        hitData.fromInside = fromInside;
-        hitData.dist = dist;
-        hitData.normal = normalize((rayPos+rayDir*dist) - sphere.xyz) * (fromInside ? -1.0 : 1.0);
-        return true;
-    }
-
-    return false;
-}
-
 bool hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     return hitLatticeMarch(rayPos, rayDir, hitData);
 }
@@ -405,39 +329,17 @@ vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
     return ret;
 }
 
-void getCameraVectors(out vec3 cameraPos, out vec3 cameraFwd, out vec3 cameraUp, out vec3 cameraRight) {
-    cameraPos = vec3(0.01, 0.01, 600.0);
-    cameraFwd = vec3(0.0, 0.0, -1.0);
-    cameraRight = normalize(vec3(1.0, 0.02, 0.0));
-    cameraUp = normalize(cross(cameraFwd, cameraRight));
-}
-
 void main() {
     ivec2 res = textureSize(u_renderTexture, 0);
     vec2 fragCoord = vec2(gl_FragCoord);
     uint rngState = uint(uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277) + uint(u_seed) * uint(26699)) | uint(1);
 
-    // calculate subpixel camera jitter for anti aliasing
-    vec2 jitter = vec2(randomFloat01(rngState), randomFloat01(rngState)) - 0.5;
-
-    vec3 cameraPos, cameraFwd, cameraUp, cameraRight;
-    getCameraVectors(cameraPos, cameraFwd, cameraUp, cameraRight);
-    vec3 rayDir;
-
-    vec2 uvJittered = (gl_FragCoord.xy + jitter) / vec2(res.xy);
-    vec2 screen = uvJittered * 2.0 - 1.0;
-
-    float aspectRatio = float(res.x) / float(res.y);
-    screen.y /= aspectRatio;
-
-    float cameraDistance = tan(c_FOVDeg * 0.5 * PI / 180.0);
-    rayDir = vec3(screen, cameraDistance);
-    rayDir = normalize(mat3(cameraRight, cameraUp, cameraFwd) * rayDir);
+    vec3 cameraPos, rayDir;
+    cameraPos = v_rayOrigin;
+    rayDir = normalize(v_rayTarget);
 
     vec3 color = vec3(0.0);
-    for (int i = 0; i < c_samplesPerFrame; ++i) {
-    	color += traceRay(cameraPos, rayDir, rngState) / float(c_samplesPerFrame);
-    }
+    color += traceRay(cameraPos, rayDir, rngState);
 
     vec3 prevColor = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0).xyz;
     color = mix(prevColor, color, u_blend);
