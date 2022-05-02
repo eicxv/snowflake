@@ -126,18 +126,27 @@ vec4 interpolateValue(vec2 uv, ivec2 res) {
     coord = normalMapCoord(coord, res);
     tex = texelFetch(u_latticeTexture, coord, 0);
     tex.xyz = rotateNormal(tex.xyz, sextant, flip);
+    if (tex.w == 0.) {
+        return vec4(0., 0., 1., 0.);
+    }
     value += weights.x * tex;
 
     coord = symmetryTransform(ivec2(round(c1)), sextant, flip);
     coord = normalMapCoord(coord, res);
     tex = texelFetch(u_latticeTexture, coord, 0);
     tex.xyz = rotateNormal(tex.xyz, sextant, flip);
+    if (tex.w == 0.) {
+        return vec4(0., 0., 1., 0.);
+    }
     value += weights.y * tex;
 
     coord = symmetryTransform(ivec2(round(c2)), sextant, flip);
     coord = normalMapCoord(coord, res);
     tex = texelFetch(u_latticeTexture, coord, 0);
     tex.xyz = rotateNormal(tex.xyz, sextant, flip);
+    if (tex.w == 0.) {
+        return vec4(0., 0., 1., 0.);
+    }
     value += weights.z * tex;
 
     value.xyz = normalize(value.xyz);

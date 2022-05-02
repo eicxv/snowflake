@@ -231,7 +231,7 @@ vec3 environment(vec3 rayPos, vec3 rayDir, inout uint rngState) {
 
     vec3 lightDir;
     col += light(rayDir, LIGHT_1_COL, LIGHT_1_DIR, 0.83, 0.88);
-    col += light(rayDir, LIGHT_2_COL, LIGHT_2_DIR, 0.83, 0.88);
+    col += light(rayDir, LIGHT_2_COL, LIGHT_2_DIR, 0.7, 0.78);
     col += light(rayDir, LIGHT_3_COL, LIGHT_3_DIR, 0.83, 0.88);
     return col;
 }
@@ -286,7 +286,7 @@ bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
     }
     tex = sampleLattice(pos.xy);
 
-    if (tex.w < EPS) {
+    if (tex.w == 0.0) {
         return false;
     }
     vec3 normal = tex.xyz;
