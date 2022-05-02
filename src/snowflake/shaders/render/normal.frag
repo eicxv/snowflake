@@ -7,6 +7,7 @@ precision mediump float;
 #endif
 
 uniform highp sampler2D u_latticeTexture;
+uniform float u_normalBlend;
 
 out vec4 state;
 
@@ -103,12 +104,12 @@ vec3 edgeNormal(vec4[6] nbs) {
 
 // double edge normal
 
-// #define EDGE_NORMAL
+#define EDGE_NORMAL
 // #define MIX_EDGE_NORMAL
 
 // outer edge normal
 
-#define EDGE_NORMAL_ON_BOUNDARY
+// #define EDGE_NORMAL_ON_BOUNDARY
 #define MIX_EDGE_NORMAL
 
 void main() {
@@ -129,7 +130,7 @@ void main() {
     if (cell.x < 0.5) {
         #ifdef MIX_EDGE_NORMAL
         if (dot(en, en) > 0.01) {
-            n = mix(normalize(en), n, 0.5);
+            n = mix(normalize(en), n, u_normalBlend);
             n = normalize(n);
         }
         #else
@@ -140,7 +141,7 @@ void main() {
     #ifdef EDGE_NORMAL
         #ifdef MIX_EDGE_NORMAL
         if (dot(en, en) > 0.01) {
-            n = mix(normalize(en), n, 0.5);
+            n = mix(normalize(en), n, u_normalBlend);
             n = normalize(n);
         }
         #else

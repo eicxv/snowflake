@@ -83,6 +83,7 @@ export interface SnowflakeSimulationUniforms extends Uniforms {
 export interface SnowflakeRenderUniforms extends Uniforms {
   u_normalTexture: WebGLTexture;
   u_renderTexture: WebGLTexture;
+  u_normalBlend: number;
   u_blend: number;
   u_seed: number;
   u_viewProjectionMatrix: mat4;
