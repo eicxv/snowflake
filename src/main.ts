@@ -86,7 +86,6 @@ function main(): void {
     animationConfig,
     visConfig
   );
-  window.isFxpreview = true;
 
   if (window.isFxpreview) {
     controller.runHeadless();
