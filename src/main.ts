@@ -1,6 +1,7 @@
 import { mat4, vec3 } from "gl-matrix";
 import { displayError } from "./display-error";
 import { generateOverwrites } from "./snowflake/color-generator";
+import { features } from "./snowflake/features";
 import { generateParameters } from "./snowflake/generate-parameters";
 import { createKeyHandler, setCanvasSize } from "./snowflake/handle-input";
 import {
@@ -11,6 +12,7 @@ import {
 } from "./snowflake/snowflake-config";
 import { SnowflakeController } from "./snowflake/snowflake-controller";
 import { SnowflakeDriver } from "./snowflake/snowflake-driver";
+import { random } from "./snowflake/utils";
 import { ExtensionUnavailableError, WebglCreationError } from "./webgl/errors";
 
 const position = [0, 0, 600] as vec3;
@@ -22,7 +24,7 @@ const animationConfig: SnowflakeAnimationConfig = {
   growthPerFrame: 100,
   drawInterval: 200,
   samplesPerFrame: 5,
-  samplesPerGrowthCycles: 20,
+  samplesPerInterval: 20,
   blendReset: 10,
 };
 
@@ -35,20 +37,26 @@ const visConfig: SnowflakeVisConfig = {
   resolution: [1000, 1000],
   samples: 300,
   viewMatrix,
+  cameraPosition: position,
   overwrites: { pathTrace: generateOverwrites() },
 };
 
-// const simConfig = sc;
+const dynamicEnvironmentChance = 0.1;
 
 const generatorConfig: SnowflakeGeneratorConfig = {
   maxGrowthCycles: 80000,
-  preferredMinSnowflakePercentage: 0.3,
-  maxSnowflakePercentage: 0.7,
-  envChangeChance: 0.2,
+  environmentChangePercentage: 0.7,
+  maxPercentage: 0.7,
+  dynamicEnvironment: random() < dynamicEnvironmentChance,
   latticeLongRadius: simConfig.latticeLongRadius,
-  environmentTransitionStepInterval: 200,
+  environmentTransitionStepInterval: 100,
   environmentTransitionSteps: 100,
 };
+
+features.setFeature(
+  "Environment",
+  generatorConfig.dynamicEnvironment ? "Dynamic" : "Static"
+);
 
 function main(): void {
   const res = Math.min(
@@ -78,11 +86,14 @@ function main(): void {
     animationConfig,
     visConfig
   );
+  window.isFxpreview = true;
 
-  document.addEventListener("keydown", createKeyHandler(controller));
-  // createDataset(driver, 500);
-  // testColors();
-  controller.startAnimation();
+  if (window.isFxpreview) {
+    controller.runHeadless();
+  } else {
+    document.addEventListener("keydown", createKeyHandler(controller));
+    controller.run();
+  }
 }
 
 main();

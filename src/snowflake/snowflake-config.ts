@@ -10,9 +10,9 @@ export interface SnowflakeControlConfig {
 
 export interface SnowflakeGeneratorConfig {
   maxGrowthCycles: number;
-  preferredMinSnowflakePercentage: number;
-  maxSnowflakePercentage: number;
-  envChangeChance: number;
+  environmentChangePercentage: number;
+  maxPercentage: number;
+  dynamicEnvironment: boolean;
   latticeLongRadius: number;
   environmentTransitionSteps: number;
   environmentTransitionStepInterval: number;
@@ -21,7 +21,7 @@ export interface SnowflakeGeneratorConfig {
 export interface SnowflakeAnimationConfig {
   growthPerFrame: number;
   samplesPerFrame: number;
-  samplesPerGrowthCycles: number;
+  samplesPerInterval: number;
   blendReset: number;
   drawInterval: number;
 }
@@ -47,6 +47,7 @@ export interface PathTraceOverwrite extends Overwrite {
 export interface SnowflakeVisConfig {
   resolution: [number, number];
   viewMatrix: mat4;
+  cameraPosition: vec3;
   samples: number;
   overwrites?: {
     pathTrace?: Overwrite;

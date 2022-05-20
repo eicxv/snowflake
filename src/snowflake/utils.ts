@@ -44,12 +44,11 @@ function logMassFunction(): (driver: SnowflakeDriver, change: boolean) => void {
     }
     prevMass = mass;
   }
-
   return logMass;
 }
 
 export function random(min = 0, max = 1): number {
-  return fxrand() * (max - min) + min;
+  return window.fxrand() * (max - min) + min;
 }
 
 export const logMass = logMassFunction();
@@ -72,4 +71,25 @@ export function captureCanvas(
     }
     saveBlob(blob, fileName);
   });
+}
+
+export function sampleArrayWeighted<T>(
+  arr: ArrayLike<T>,
+  weights: Array<number>
+): T {
+  const total = weights.reduce((a, b) => a + b, 0);
+  const rand = random(0, total);
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) {
+    sum += weights[i];
+    if (sum > rand) {
+      return arr[i];
+    }
+  }
+  return arr[0];
+}
+
+export function sampleArray<T>(arr: ArrayLike<T>): T {
+  const index = Math.floor(random() * arr.length);
+  return arr[index];
 }

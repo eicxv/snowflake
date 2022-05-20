@@ -1,12 +1,13 @@
 import { vec3 } from "gl-matrix";
-import { hsluvToLch, lchToLuv, luvToXyz } from "hsluv";
-import { random } from "./utils";
+import { hsluvToHex, hsluvToLch, lchToLuv, luvToXyz } from "hsluv";
+import { features } from "./features";
+import { random, sampleArrayWeighted } from "./utils";
 
 type Vector3 = [number, number, number];
 
 enum Lightness {
   White = 100,
-  Pastel = 75,
+  Pastel = 80,
   Standard = 50,
 }
 
@@ -19,7 +20,7 @@ enum Harmony {
 
 interface ColorData {
   hsl: Vector3;
-  scale: number;
+  intensity: number;
 }
 
 type ColorDataCollection = Record<string, ColorData>;
@@ -38,29 +39,51 @@ function initColors(colorNames: string[]): ColorDataCollection {
   for (const colorName of colorNames) {
     colors[colorName] = {
       hsl: [0, 0, 0],
-      scale: 1,
+      intensity: 1,
     };
   }
   return colors;
 }
 
+function setFeatures(
+  colorData: ColorDataCollection,
+  lightness: Lightness,
+  harmony: Harmony
+): void {
+  const white = lightness == Lightness.White;
+  const fs = [
+    ["Primary Color", colorData.LIGHT_1_COL],
+    ["Secondary Color", colorData.LIGHT_2_COL],
+    ["Tertiary Color", colorData.LIGHT_3_COL],
+  ] as Array<[string, ColorData]>;
+  fs.forEach(([name, color]) => {
+    const colorName = white ? "White" : colorNameFromHue(color.hsl[0]);
+    features.setFeature(name, colorName);
+  });
+  features.setFeature("Harmony", Harmony[harmony]);
+}
+
 function chooseSettings(): [Harmony, Lightness] {
-  const harmonyWeights = [0.1, 0.25, 0.3, 0.35];
   const lightWeights = [0.05, 0.25, 0.7];
-  const harmony = sampleArrayWeighted(
-    [
-      Harmony.Monochrome,
-      Harmony.Analogous,
-      Harmony.Triad,
-      Harmony.Complementary,
-    ],
-    harmonyWeights
-  );
+  const harmonyWeights = [0.1, 0.3, 0.25, 0.35];
+
   const lightness = sampleArrayWeighted(
     [Lightness.White, Lightness.Pastel, Lightness.Standard],
     lightWeights
   );
-  console.log(Harmony[harmony], Lightness[lightness]);
+  const harmony =
+    lightness == Lightness.White
+      ? Harmony.Monochrome
+      : sampleArrayWeighted(
+          [
+            Harmony.Monochrome,
+            Harmony.Analogous,
+            Harmony.Triad,
+            Harmony.Complementary,
+          ],
+          harmonyWeights
+        );
+
   return [harmony, lightness];
 }
 
@@ -77,14 +100,16 @@ function generateColors(): Record<string, Vector3> {
   ]);
   genHues(colorData, harmony);
   genSaturation(colorData, lightness, harmony);
-  genMultiplier(colorData, lightness, harmony);
+  genIntensity(colorData, lightness, harmony);
   genLightness(colorData, lightness);
   const colors: Record<string, Vector3> = {};
   for (const [colorName, data] of Object.entries(colorData)) {
     const rgb = hsluvToLinear(data.hsl);
-    vec3.scale(rgb, rgb, data.scale);
+    vec3.scale(rgb, rgb, data.intensity);
     colors[colorName] = rgb;
   }
+  setBackgroundStyle(colorData);
+  setFeatures(colorData, lightness, harmony);
   return colors;
 }
 
@@ -122,8 +147,8 @@ function genSaturation(
   harmony: Harmony
 ): void {
   const lightSat = 50;
-  let groundSat = 35;
-  let accentSat = 25;
+  let groundSat = 30;
+  let accentSat = 22;
   let skySat = 20;
   if (lightness === Lightness.Pastel || harmony === Harmony.Monochrome) {
     groundSat = 25;
@@ -143,45 +168,45 @@ function genSaturation(
   colors.SKY_COL.hsl[1] = skySat;
 }
 
-function genMultiplier(
+function genIntensity(
   colors: ColorDataCollection,
   lightness: Lightness,
   harmony: Harmony
 ): void {
   let lightMultipliers: Vector3;
   if (harmony === Harmony.Monochrome || lightness === Lightness.White) {
-    lightMultipliers = [12.2, 1.2, 0.6]; // check for luminance
+    lightMultipliers = [12.4, 2.2, 1.2];
   } else if (harmony === Harmony.Complementary) {
-    // lightMultipliers = [10.5, 6.75, 6.75];
-    // lightMultipliers = [8.5, 9, 7];
-    lightMultipliers = [8.5, 8, 8.5]; // check for luminance
-    // lightMultipliers = [0, 0, 10];
+    lightMultipliers = [10.5, 3.5, 6];
+    // lightMultipliers = [9.5, 7.5, 8];
   } else if (harmony === Harmony.Triad) {
-    // lightMultipliers = [9, 7, 0];
-    lightMultipliers = [9.5, 7, 6.5];
+    // lightMultipliers = [10, 7, 6.5];
+    lightMultipliers = [10, 4, 6.5];
   } else {
-    // lightMultipliers = [8, 10, 7];
-    lightMultipliers = [9, 7.5, 7.5]; // check for luminance
+    // Analogous
+    lightMultipliers = [10.5, 5.5, 6];
+    // lightMultipliers = [10.5, 7.5, 6];
   }
   switch (lightness) {
     case Lightness.White:
       vec3.scale(lightMultipliers, lightMultipliers, 0.25);
       break;
     case Lightness.Pastel:
-      vec3.scale(lightMultipliers, lightMultipliers, 0.4);
+      vec3.scale(lightMultipliers, lightMultipliers, 0.5);
       break;
     case Lightness.Standard:
       break;
   }
+  vec3.scale(lightMultipliers, lightMultipliers, 1.2);
 
   const groundMult = random(0.12, 0.28);
-  colors.LIGHT_1_COL.scale = lightMultipliers[0];
-  colors.LIGHT_2_COL.scale = lightMultipliers[1];
-  colors.LIGHT_3_COL.scale = lightMultipliers[2];
-  colors.GROUND_COL.scale = groundMult;
-  colors.GROUND_ACCENT_COL.scale = groundMult * 0.6;
-  colors.HORIZON_COL.scale = groundMult * 1.25;
-  colors.SKY_COL.scale = groundMult * 1.5;
+  colors.LIGHT_1_COL.intensity = lightMultipliers[0];
+  colors.LIGHT_2_COL.intensity = lightMultipliers[1];
+  colors.LIGHT_3_COL.intensity = lightMultipliers[2];
+  colors.GROUND_COL.intensity = groundMult;
+  colors.GROUND_ACCENT_COL.intensity = groundMult * 0.6;
+  colors.HORIZON_COL.intensity = groundMult * 1.25;
+  colors.SKY_COL.intensity = groundMult * 1.5;
 }
 
 function genLightness(colors: ColorDataCollection, lightness: Lightness): void {
@@ -192,24 +217,6 @@ function genLightness(colors: ColorDataCollection, lightness: Lightness): void {
   colors.GROUND_ACCENT_COL.hsl[2] = 30;
   colors.HORIZON_COL.hsl[2] = 35;
   colors.SKY_COL.hsl[2] = 35;
-}
-
-function sampleArrayWeighted<T>(arr: ArrayLike<T>, weights: Array<number>): T {
-  const total = weights.reduce((a, b) => a + b, 0);
-  const rand = random(0, total);
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) {
-    sum += weights[i];
-    if (sum > rand) {
-      return arr[i];
-    }
-  }
-  return arr[0];
-}
-
-function sampleArray<T>(arr: ArrayLike<T>): T {
-  const index = Math.floor(random() * arr.length);
-  return arr[index];
 }
 
 function hsluvToLinear(hsluv: Vector3): Vector3 {
@@ -272,4 +279,53 @@ export function generateOverwrites(): Record<string, string> {
     overwrites[key] = toGlsl(value);
   });
   return overwrites;
+}
+
+// function colorNameFromHue(hue: number): string {
+//   hue = (hue + 360) % 360;
+//   const hueNames = [
+//     "orange",
+//     "yellow",
+//     "green",
+//     "turquoise",
+//     "blue",
+//     "violet",
+//     "magenta",
+//   ];
+//   const hueName = hueNames[Math.floor((hue / 360) * hueNames.length)];
+//   return hueName;
+// }
+function colorNameFromHue(hue: number): string {
+  hue = (hue + 360) % 360;
+  const hn = [
+    ["Rose", 5],
+    ["Red", 15],
+    ["Amber", 40],
+    ["Yellow", 70],
+    ["Chartreuse", 105],
+    ["Green", 140],
+    ["Aquamarine", 160],
+    ["Turquoise", 200],
+    ["Azure", 240],
+    ["Blue", 275],
+    ["Violet", 310],
+    ["Magenta", 345],
+    ["Rose", 360],
+  ] as Array<[string, number]>;
+
+  for (const [name, h] of hn) {
+    if (hue <= h) {
+      return name;
+    }
+  }
+  throw new Error("Color name error");
+}
+
+function setBackgroundStyle(colors: ColorDataCollection): void {
+  const html = document.documentElement;
+  const col = colors.GROUND_COL;
+  const hsl = col.hsl;
+  hsl[2] = hsl[2] * col.intensity * 0.5;
+  const bgColor = hsluvToHex(colors.GROUND_COL.hsl);
+  html.style.backgroundColor = bgColor;
 }

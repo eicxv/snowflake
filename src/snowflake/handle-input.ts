@@ -23,7 +23,7 @@ function saveImage(controller: SnowflakeController): void {
   controller.driver.snowflake.display();
   const canvas = controller.driver.gl.canvas;
   const res = controller.driver.snowflake.visConfig.resolution[0];
-  const fileName = `snowflake-${fxhash}-${res}px.png`;
+  const fileName = `snowflake-${window.fxhash}-${res}px.png`;
   captureCanvas(canvas, fileName);
 }
 
@@ -35,25 +35,26 @@ export function createKeyHandler(
       case "r":
         setResolution(controller);
         if (!controller.animating) {
-          controller.queueDraw(2);
-          controller.startAnimation();
+          controller.draw(2);
         }
         break;
       case "q":
-        controller.queueDraw(300);
-        controller.startAnimation();
+        controller.draw(controller.driver.snowflake.visConfig.samples);
+        break;
+      case "w":
+        controller.draw(1);
         break;
       case "s":
         saveImage(controller);
         break;
       case "f":
-        controller.animateGrowth = !controller.animateGrowth;
+        controller.toggleVis();
         break;
       case "v":
         controller.driver.snowflake.visualize();
         break;
       case "d":
-        controller.finalRender();
+        controller.finish();
         break;
       case "n":
         controller.driver.snowflake.displayTest();

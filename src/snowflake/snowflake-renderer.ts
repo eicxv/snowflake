@@ -1,4 +1,3 @@
-import Camera from "../webgl/camera/camera";
 import { ComputeVariable } from "../webgl/compute-variable";
 import { TextureFilter, TextureWrap } from "../webgl/gl-utility";
 import { Program } from "../webgl/program";
@@ -22,7 +21,6 @@ import { SnowflakeSimulator } from "./snowflake-simulator";
 export class SnowflakeRenderer extends SnowflakeSimulator {
   gl: WebGL2RenderingContext;
   visConfig: SnowflakeVisConfig;
-  camera: Camera;
   internalSteps = 1;
   seed = 0;
   renderStep = 0;
@@ -35,7 +33,6 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
     super(gl, simConfig);
     this.gl = gl;
     this.visConfig = visConfig;
-    this.camera = new Camera(this.gl, visConfig.cameraSettings);
     Object.assign(this.variables, this.createVisVariables());
     Object.assign(this.uniforms, this.createVisUniforms());
     Object.assign(this.programs, this.createVisPrograms());
@@ -84,8 +81,8 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
     const uniforms = {
       u_renderTexture: this.variables.render.getTexture(),
       u_normalTexture: this.variables.normal.getTexture(),
-      u_viewMatrix: this.camera.viewMatrix,
-      u_cameraPosition: this.camera.position,
+      u_viewMatrix: this.visConfig.viewMatrix,
+      u_cameraPosition: this.visConfig.cameraPosition,
       u_normalBlend: 0.9,
       u_seed: 0,
       u_blend: 1,
@@ -148,15 +145,45 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
     return boundaryLengthPerArea;
   }
 
+  stats(): {
+    boundaryLength: number;
+    area: number;
+    mass: number;
+    radius: number;
+    time: number;
+  } {
+    const gl = this.gl;
+    const [width, height] = this.variables.lattice.resolution;
+    gl.viewport(0, 0, width, height);
+    const variable = this.variables.lattice;
+    const framebuffer = this.variables.lattice.getFramebuffer(1);
+
+    this.uniforms.u_latticeTexture = variable.getTexture();
+    this.programs.boundary.framebuffer = framebuffer;
+    this.programs.boundary.run();
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    const buffer = new Float32Array(4 * width * height);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, buffer);
+
+    const [boundaryLength, area] = this.countBoundaryLength(
+      buffer,
+      width,
+      height
+    );
+    const mass = this.countFrozenMass(buffer, width, height);
+    const radius = this.findFirstNonFrozenCell(buffer.slice(0, width * 4));
+    return { boundaryLength, area, mass, radius, time: this.growthCount };
+  }
+
   updateNormalBlend(): void {
     const bpa = this.boundaryLength();
     const normalBlend = this.estimateNormalBlend(bpa);
-    console.log("normalBlend", normalBlend);
     this.uniforms.u_normalBlend = normalBlend;
   }
 
   private estimateNormalBlend(x: number): number {
-    return (2 / Math.PI) * 0.995 * Math.atan(0.96e2 * x);
+    return (2 / Math.PI) * 0.984 * Math.atan(0.96e2 * x);
   }
 
   protected countBoundaryLength(
@@ -174,6 +201,17 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
       }
     }
     return [boundaryLength, area];
+  }
+
+  countFrozenMass(cells: Float32Array, width: number, height: number): number {
+    let mass = 0;
+    for (let j = 0; j < height; j++) {
+      for (let i = 2 * j; i < width; i++) {
+        const index = (i + j * width) * 4;
+        mass += cells[index + 2];
+      }
+    }
+    return mass;
   }
 
   pathTrace(cycles: number = 1): void {
@@ -236,7 +274,6 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
   }
 
   visualize(): void {
-    console.log("visualizing");
     const [width, height] = this.visConfig.resolution;
     this.gl.viewport(0, 0, width, height);
     this.gl.canvas.width = width;

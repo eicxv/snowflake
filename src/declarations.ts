@@ -3,5 +3,13 @@ declare module "*?raw" {
   export default content;
 }
 
-declare function fxrand(): number;
-declare let fxhash: string;
+declare module "fxhash" {
+  global {
+    interface Window {
+      fxrand(): number;
+      fxhash: string;
+      isFxpreview: boolean;
+      $fxhashFeatures: Record<string, string>;
+    }
+  }
+}
