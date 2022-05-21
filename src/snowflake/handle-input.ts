@@ -1,3 +1,4 @@
+import { showModal } from "../modal";
 import { SnowflakeController } from "./snowflake-controller";
 import { captureCanvas } from "./utils";
 
@@ -6,11 +7,25 @@ export function setCanvasSize(canvas: HTMLElement, resolution: number): void {
   canvas.style.height = `${resolution}px`;
 }
 
-function setResolution(controller: SnowflakeController): void {
+async function setResolution(controller: SnowflakeController): Promise<void> {
   const oldRes = controller.driver.snowflake.visConfig.resolution[0];
-  const res = Math.round(Number(prompt("Enter resolution", oldRes.toString())));
+  const [success, resStr] = await showModal(
+    {
+      header: "Set resolution",
+      content: `Enter new resolution. Current resolution is ${oldRes}px.`,
+    },
+    { confirm: true, cancel: true, input: true }
+  );
+  if (success !== true) {
+    return;
+  }
+  const res = Math.round(Number(resStr));
   if (!isFinite(res) || res <= 0) {
-    alert("Invalid resolution");
+    showModal(
+      { header: "Resolution Error", content: "Invalid resolution." },
+      { confirm: true },
+      ["error"]
+    );
     return;
   }
   setCanvasSize(controller.driver.gl.canvas, res);
@@ -35,7 +50,7 @@ export function createKeyHandler(
       case "r":
         setResolution(controller);
         if (!controller.animating) {
-          controller.draw(2);
+          controller.draw(controller.driver.snowflake.visConfig.samples);
         }
         break;
       case "q":
@@ -49,15 +64,6 @@ export function createKeyHandler(
         break;
       case "f":
         controller.toggleVis();
-        break;
-      case "v":
-        controller.driver.snowflake.visualize();
-        break;
-      case "d":
-        controller.finish();
-        break;
-      case "n":
-        controller.driver.snowflake.displayTest();
         break;
       default:
         break;

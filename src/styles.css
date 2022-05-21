@@ -1,42 +1,129 @@
-html {
-    margin: 0;
-    padding: 0;
-    background: #0a0a0a;
+:root {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
 }
 
 body {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 canvas {
-    width: 100vw;
-    height: 100vh;
-    display: block;
-    margin: 0 auto;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  margin: 0 auto;
+}
+
+.modal {
+  position: absolute;
+  top: 0;
+  margin: 6rem 0;
+  font-family: Arial, Helvetica, sans-serif;
+  z-index: 10;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+}
+
+.modal-content {
+  background-color: #faf9f6;
+  border-radius: 0.25rem;
+  padding: 3rem;
+  box-shadow: rgba(50, 50, 93, 0.1) 0 0 0 1px inset,
+    rgba(50, 50, 93, 0.1) 0 2px 5px 0, rgba(0, 0, 0, 0.07) 0 1px 1px 0;
+}
+
+.visible {
+  display: block;
 }
 
 .error {
-    position: absolute;
-    top: 0;
-    left: 0;
-    padding: 3rem;
-    margin: 3rem 1rem;
-    font-family: Arial, Helvetica, sans-serif;
-    z-index: 10;
-    border-radius: 0.25rem;
-    background-color: coral;
+  background-color: rgb(241, 162, 143);
 }
 
-.error h1, .error p {
-    font-size: 1.5rem;
-    margin: 0;
-    padding: 0;
+.modal h1,
+.modal p {
+  font-size: 1rem;
+  margin: 0;
+  padding: 0;
 }
 
-.error h1 {
-    font-weight: bold;
-    margin-bottom: 1rem;
+.modal h1 {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
 }
 
+button {
+  border-radius: 6px;
+  border-width: 0;
+  box-shadow: rgba(50, 50, 93, 0.1) 0 0 0 1px inset,
+    rgba(50, 50, 93, 0.1) 0 2px 5px 0, rgba(0, 0, 0, 0.07) 0 1px 1px 0;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  height: 44px;
+  line-height: 1.15;
+  margin: 0.8rem 0.4rem 0;
+  outline: none;
+  overflow: hidden;
+  padding: 0 25px;
+  position: relative;
+  text-align: center;
+  text-transform: none;
+  transition: all 0.2s, box-shadow 0.08s ease-in;
+  -webkit-user-select: none;
+  user-select: none;
+}
 
+.hidden {
+  visibility: hidden;
+}
+
+.confirm {
+  background-color: rgb(195, 230, 157);
+}
+
+.cancel {
+  background-color: rgb(245, 195, 182);
+}
+
+button:focus {
+  box-shadow: rgba(50, 50, 93, 0.1) 0 0 0 1px inset,
+    rgba(50, 50, 93, 0.2) 0 6px 15px 0, rgba(0, 0, 0, 0.1) 0 2px 2px 0,
+    rgba(50, 151, 211, 0.3) 0 0 0 4px;
+}
+
+.input {
+  display: block;
+  padding: 0.8rem 1.6rem;
+  color: inherit;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: inherit;
+  line-height: 1.15;
+  margin: 0.8rem 0.4rem 0;
+  border: none;
+  border-radius: 0.4rem;
+  box-shadow: rgba(50, 50, 93, 0.1) 0 0 0 1px inset,
+    rgba(50, 50, 93, 0.1) 0 2px 5px 0, rgba(0, 0, 0, 0.07) 0 1px 1px 0;
+}
+
+.input::placeholder {
+  color: #b0bec5;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: rgba(50, 50, 93, 0.1) 0 0 0 1px inset,
+    rgba(50, 50, 93, 0.2) 0 6px 15px 0, rgba(0, 0, 0, 0.1) 0 2px 2px 0,
+    rgba(50, 151, 211, 0.3) 0 0 0 4px;
+}
+
+.input:placeholder-shown + .Input-label {
+  visibility: hidden;
+  z-index: -1;
+}

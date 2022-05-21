@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { displayError } from "./display-error";
+import { displayError } from "./modal";
 import { generateOverwrites } from "./snowflake/color-generator";
 import { features } from "./snowflake/features";
 import { generateParameters } from "./snowflake/generate-parameters";
@@ -57,6 +57,7 @@ features.setFeature(
   "Environment",
   generatorConfig.dynamicEnvironment ? "Dynamic" : "Static"
 );
+features.registerFeatures();
 
 function main(): void {
   const res = Math.min(

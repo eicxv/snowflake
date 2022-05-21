@@ -1,4 +1,3 @@
-import { features } from "./features";
 import { generateParameters } from "./generate-parameters";
 import {
   SnowflakeAnimationConfig,
@@ -209,11 +208,12 @@ export class SnowflakeController {
   async finish(): Promise<void> {
     this.terminate = true;
     const sf = this.driver.snowflake;
-    features.addStats(sf.stats());
-    features.registerFeatures();
     sf.renderStep = 0;
     sf.updateNormalBlend();
     await this.draw(this.finalRenderSamples);
+    if (window.isFxpreview) {
+      window.fxpreview();
+    }
   }
 
   private getRadius(): { r: number; t: number } {

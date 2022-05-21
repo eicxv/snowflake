@@ -8,8 +8,9 @@ declare module "fxhash" {
     interface Window {
       fxrand(): number;
       fxhash: string;
-      isFxpreview: boolean;
       $fxhashFeatures: Record<string, string>;
+      isFxpreview: boolean;
+      fxpreview(): void;
     }
   }
 }
