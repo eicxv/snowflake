@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { displayError } from "./modal";
+import { showError } from "./modal";
 import { generateOverwrites } from "./snowflake/color-generator";
 import { features } from "./snowflake/features";
 import { generateParameters } from "./snowflake/generate-parameters";
@@ -75,7 +75,7 @@ function main(): void {
       err instanceof WebglCreationError ||
       err instanceof ExtensionUnavailableError
     ) {
-      displayError(err);
+      showError(err);
     } else {
       throw err;
     }

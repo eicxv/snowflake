@@ -46,7 +46,7 @@ export function showModal(
   });
 }
 
-export function displayError(err: unknown): void {
+export function showError(err: unknown): void {
   let message;
   if (err instanceof WebglCreationError) {
     message =
@@ -73,8 +73,8 @@ function addModal(
   content.classList.add(...classNames);
   const h = document.createElement("h1");
   const p = document.createElement("p");
-  h.textContent = message.header;
-  p.textContent = message.content;
+  h.innerHTML = message.header;
+  p.innerHTML = message.content;
   content.appendChild(h);
   content.appendChild(p);
   modal.appendChild(content);

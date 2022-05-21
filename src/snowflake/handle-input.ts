@@ -1,5 +1,7 @@
 import { showModal } from "../modal";
+import { features } from "./features";
 import { SnowflakeController } from "./snowflake-controller";
+import { SnowflakeRenderer } from "./snowflake-renderer";
 import { captureCanvas } from "./utils";
 
 export function setCanvasSize(canvas: HTMLElement, resolution: number): void {
@@ -46,18 +48,16 @@ export function createKeyHandler(
   controller: SnowflakeController
 ): (e: KeyboardEvent) => void {
   function handleKey(e: KeyboardEvent): void {
+    const sf = controller.driver.snowflake;
     switch (e.key) {
       case "r":
         setResolution(controller);
         if (!controller.animating) {
-          controller.draw(controller.driver.snowflake.visConfig.samples);
+          controller.draw(sf.visConfig.samples);
         }
         break;
       case "q":
-        controller.draw(controller.driver.snowflake.visConfig.samples);
-        break;
-      case "w":
-        controller.draw(1);
+        controller.draw(sf.visConfig.samples);
         break;
       case "s":
         saveImage(controller);
@@ -65,9 +65,57 @@ export function createKeyHandler(
       case "f":
         controller.toggleVis();
         break;
+      case "a":
+        showStats(sf);
+        break;
+      case "h":
+        showHelp();
+        break;
       default:
         break;
     }
   }
   return handleKey;
+}
+
+function showStats(sf: SnowflakeRenderer): void {
+  const { mass, time } = sf.stats();
+  const feats = features.getFeatures();
+  feats[
+    "Colors"
+  ] = `${feats["Primary Color"]}, ${feats["Secondary Color"]}, ${feats["Tertiary Color"]}`;
+  delete feats["Primary Color"];
+  delete feats["Secondary Color"];
+  delete feats["Tertiary Color"];
+
+  const featsString = Object.entries(feats)
+    .map(([name, value]) => `${name}: ${value}`)
+    .join("<br>");
+
+  const res = sf.visConfig.resolution[0];
+
+  const message = {
+    header: "About",
+    content: `Resolution: ${res}px<br>
+    Render Iterations: ${sf.renderStep}<br>
+    Mass: ${Math.round(mass)}<br>
+    Growth Iterations: ${time}<br>
+    ${featsString}`,
+  };
+
+  showModal(message, { confirm: true });
+}
+
+function showHelp(): void {
+  const message = {
+    header: "Instructions",
+    content: `R: Change resolution<br>
+    Q: Increase quality (run additional render iterations)<br>
+    S: Save image as PNG<br>
+    F: Toggle simple visualization during growth (faster growth)<br>
+    A: Show information about the snowflake<br>
+    H: Show help`,
+  };
+
+  showModal(message, { confirm: true });
 }

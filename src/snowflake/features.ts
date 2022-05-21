@@ -21,6 +21,10 @@ class Features {
   registerFeatures(): void {
     window.$fxhashFeatures = { ...this.features };
   }
+
+  getFeatures(): Record<string, string> {
+    return { ...this.features };
+  }
 }
 
 function getLabel(type: "mass" | "growthRate", value: number): string {
