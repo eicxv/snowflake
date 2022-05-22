@@ -11,11 +11,15 @@ body {
   padding: 0;
 }
 
+.container {
+  position: relative;
+}
+
 canvas {
-  width: 100vw;
-  height: 100vh;
-  display: block;
-  margin: 0 auto;
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
 }
 
 .modal {
@@ -128,4 +132,8 @@ button:focus {
 .input:placeholder-shown + .Input-label {
   visibility: hidden;
   z-index: -1;
+}
+
+table {
+  border-spacing: 0.5rem;
 }

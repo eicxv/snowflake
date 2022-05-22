@@ -34,7 +34,7 @@ sc.latticeLongRadius = simLatticeRadius;
 const simConfig = generateParameters(simLatticeRadius);
 
 const visConfig: SnowflakeVisConfig = {
-  resolution: [1000, 1000],
+  resolution: [1024, 1024],
   samples: 300,
   viewMatrix,
   cameraPosition: position,
