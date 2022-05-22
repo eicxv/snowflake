@@ -178,14 +178,11 @@ function genIntensity(
     lightMultipliers = [12.4, 2.2, 1.2];
   } else if (harmony === Harmony.Complementary) {
     lightMultipliers = [10.5, 3.5, 6];
-    // lightMultipliers = [9.5, 7.5, 8];
   } else if (harmony === Harmony.Triad) {
-    // lightMultipliers = [10, 7, 6.5];
     lightMultipliers = [10, 4, 6.5];
   } else {
     // Analogous
     lightMultipliers = [10.5, 5.5, 6];
-    // lightMultipliers = [10.5, 7.5, 6];
   }
   switch (lightness) {
     case Lightness.White:
@@ -241,7 +238,6 @@ function generateLightDirections(): Record<string, Vector3> {
     LIGHT_2_DIR: sphericalToCartesian([
       1,
       (0.6 * Math.PI) / 2,
-      // (random(0.7, 1.3) * Math.PI) / 2,
       (2 * Math.PI) / 3 + angleOffset,
     ]),
     LIGHT_3_DIR: sphericalToCartesian([
@@ -281,20 +277,6 @@ export function generateOverwrites(): Record<string, string> {
   return overwrites;
 }
 
-// function colorNameFromHue(hue: number): string {
-//   hue = (hue + 360) % 360;
-//   const hueNames = [
-//     "orange",
-//     "yellow",
-//     "green",
-//     "turquoise",
-//     "blue",
-//     "violet",
-//     "magenta",
-//   ];
-//   const hueName = hueNames[Math.floor((hue / 360) * hueNames.length)];
-//   return hueName;
-// }
 function colorNameFromHue(hue: number): string {
   hue = (hue + 360) % 360;
   const hn = [

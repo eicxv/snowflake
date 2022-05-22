@@ -12,14 +12,10 @@ body {
 }
 
 .container {
-  position: relative;
-}
-
-canvas {
-  position: absolute;
-  top: 50vh;
-  left: 50vw;
-  transform: translate(-50%, -50%);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  height: 100vh;
 }
 
 .modal {
