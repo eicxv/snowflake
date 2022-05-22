@@ -49,6 +49,9 @@ export function createKeyHandler(
 ): (e: KeyboardEvent) => void {
   function handleKey(e: KeyboardEvent): void {
     const sf = controller.driver.snowflake;
+    if (document.getElementsByClassName("modal").item(0)) {
+      return;
+    }
     switch (e.key) {
       case "r":
         setResolution(controller);
@@ -88,19 +91,17 @@ function showStats(sf: SnowflakeRenderer): void {
   delete feats["Secondary Color"];
   delete feats["Tertiary Color"];
 
-  const featsString = Object.entries(feats)
-    .map(([name, value]) => `${name}: ${value}`)
-    .join("<br>");
-
   const res = sf.visConfig.resolution[0];
 
   const message = {
     header: "About",
-    content: `Resolution: ${res}px<br>
-    Render Iterations: ${sf.renderStep}<br>
-    Mass: ${Math.round(mass)}<br>
-    Growth Iterations: ${time}<br>
-    ${featsString}`,
+    content: createTable({
+      Resolution: `${res}px`,
+      "Render Iterations": sf.renderStep,
+      Mass: Math.round(mass),
+      "Growth Iterations": time,
+      ...feats,
+    }),
   };
 
   showModal(message, { confirm: true });
@@ -109,13 +110,22 @@ function showStats(sf: SnowflakeRenderer): void {
 function showHelp(): void {
   const message = {
     header: "Instructions",
-    content: `R: Change resolution<br>
-    Q: Increase quality (run additional render iterations)<br>
-    S: Save image as PNG<br>
-    F: Toggle simple visualization during growth (faster growth)<br>
-    A: Show information about the snowflake<br>
-    H: Show help`,
+    content: createTable({
+      R: "Change resolution",
+      Q: "Increase quality (run additional render iterations)",
+      S: "Save image as PNG",
+      F: "Toggle simple visualization during growth (faster growth)",
+      A: "Show information about the snowflake",
+      H: "Show help",
+    }),
   };
 
   showModal(message, { confirm: true });
+}
+
+function createTable(values: Record<string, unknown>): string {
+  const table = Object.entries(values)
+    .map(([name, value]) => `<tr><td>${name}:</td><td>${value}</td></tr>`)
+    .join("");
+  return `<table>${table}</table>`;
 }
