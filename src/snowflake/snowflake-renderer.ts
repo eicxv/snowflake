@@ -10,7 +10,6 @@ import {
 import {
   BoundaryProgram,
   DisplayProgram,
-  DisplayTestProgram,
   InterpolateProgram,
   NormalProgram,
   PathTraceProgram,
@@ -55,12 +54,6 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
         this.visConfig.overwrites?.pathTrace
       ),
       display: new DisplayProgram(this.gl, this.uniforms, this.vaos.vis, null),
-      displayTest: new DisplayTestProgram(
-        this.gl,
-        this.uniforms,
-        this.vaos.vis,
-        null
-      ),
       interpolate: new InterpolateProgram(
         this.gl,
         this.uniforms,
@@ -261,16 +254,6 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
 
     this.uniforms.u_renderTexture = this.variables.render.getTexture();
     this.programs.display.run();
-  }
-
-  displayTest(): void {
-    const [width, height] = this.visConfig.resolution;
-    this.gl.viewport(0, 0, width, height);
-    this.gl.canvas.width = width;
-    this.gl.canvas.height = height;
-
-    this.uniforms.u_renderTexture = this.variables.normal.getTexture();
-    this.programs.displayTest.run();
   }
 
   visualize(): void {

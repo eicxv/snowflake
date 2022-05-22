@@ -3,7 +3,6 @@ import { preprocessSource } from "./../webgl/gl-utility";
 import computeFlippedSource from "./shaders/common/compute-flipped.vert?raw";
 import computeSource from "./shaders/common/compute.vert?raw";
 import boundarySource from "./shaders/render/boundary.frag?raw";
-import displayTestSource from "./shaders/render/display-test.frag?raw";
 import displaySource from "./shaders/render/display.frag?raw";
 import interpolateSource from "./shaders/render/interpolate.frag?raw";
 import normalSource from "./shaders/render/normal.frag?raw";
@@ -56,37 +55,6 @@ export class DisplayProgram extends Program {
     super(
       gl,
       displaySource,
-      computeSource,
-      localUniforms,
-      uniforms,
-      vao,
-      framebuffer,
-      4
-    );
-  }
-
-  bindUniforms(): void {
-    const gl = this.gl;
-    const locations = this.locations;
-    const uniforms = this.uniforms as SnowflakeUniforms;
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_renderTexture);
-    gl.uniform1i(locations.u_renderTexture, 0);
-  }
-}
-
-export class DisplayTestProgram extends Program {
-  constructor(
-    gl: WebGL2RenderingContext,
-    uniforms: SnowflakeUniforms,
-    vao: WebGLVertexArrayObject,
-    framebuffer: WebGLFramebuffer | null = null
-  ) {
-    const localUniforms = ["u_renderTexture"];
-    super(
-      gl,
-      displayTestSource,
       computeSource,
       localUniforms,
       uniforms,
