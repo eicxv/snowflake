@@ -8,11 +8,11 @@ precision mediump float;
 
 uniform highp sampler2D u_renderTexture;
 
-out vec4 color;
+out vec4 s;
 
 void main() {
-    vec4 cell = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0);
-    // cell.w = cell.w > 0.5 ? 1.0 : 0.0;
-    // color = vec4(cell.www, 1.0);
-    color = vec4(cell.xyz * 0.5 + 0.5, 1.0);
+    vec4 c = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0);
+    // c.w = c.w > 0.5 ? 1.0 : 0.0;
+    // s = vec4(c.www, 1.0);
+    s = vec4(c.xyz * 0.5 + 0.5, 1.0);
 }

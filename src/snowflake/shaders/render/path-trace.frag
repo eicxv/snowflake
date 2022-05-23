@@ -41,111 +41,111 @@ uniform float u_blend;
 in vec3 v_rayOrigin;
 in vec3 v_rayTarget;
 
-out vec4 fragColor;
+out vec4 FC;
 
-const float c_minRayDist = 0.01;
-const float c_rayPosNudge = 0.01;
-const float c_far = 10000.0;
-const int c_maxBounces = 8;
+const float cmrd = 0.01;
+const float crn = 0.01;
+const float cf = 10000.0;
+const int cmb = 8;
 
-struct Material {
-    float specularChance;      // percentage chance of doing a specular reflection
-    float specularRoughness;   // how rough the specular reflections are
-    vec3  specularColor;       // the color tint of specular reflections
-    float IOR;                 // index of refraction. used by fresnel and refraction.
-    float invIOR;              // inverse of index of refraction
-    float refractionChance;    // percent chance of doing a refractive transmission
-    float refractionRoughness; // how rough the refractive transmissions are
-    vec3  refractionColor;     // absorption for beer's law
+struct M {
+    float sC;      // percentage chance of doing a specular reflection
+    float sR;   // how rough the specular reflections are
+    vec3  sCo;       // the color tint of specular reflections
+    float IR;                 // index of refraction. used by fresnel and refraction.
+    float iIR;              // inverse of index of refraction
+    float rC;    // percent chance of doing a refractive transmission
+    float rR; // how rough the refractive transmissions are
+    vec3  rCo;     // absorption for beer's law
 };
 
-struct HitData {
-    bool fromInside;
-    float dist;
-    vec3 normal;
+struct HD {
+    bool fI;
+    float d;
+    vec3 n;
 };
 
-const Material iceMaterial = Material(
-    0.2,                          // specularChance
-    0.01 * 0.01,                  // specularRoughness
-    vec3(1.0, 1.0, 1.0) * 0.8,    // specularColor
-    1.309,                        // IOR
-    1. / 1.309,                   // invIOR
-    1.,                           // refractionChance
-    0.1 * 0.01,                  // refractionRoughness
-    vec3(0.0, 0.0, 0.0)           // refractionColor
+const M iM = M(
+    0.2,                          // sC
+    0.01 * 0.01,                  // sR
+    vec3(1.0, 1.0, 1.0) * 0.8,    // sCo
+    1.309,                        // IR
+    1. / 1.309,                   // iIR
+    1.,                           // rC
+    0.1 * 0.01,                  // rR
+    vec3(0.0, 0.0, 0.0)           // rCo
 );
 
 float ign(vec2 v) {
-    vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(magic.z * fract(dot(v, magic.xy)));
+    vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(m.z * fract(dot(v, m.xy)));
 }
 
-uint pcg(inout uint state) {
-	state *= 747796405u + 2891336453u;
-	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
+uint pcg(inout uint s) {
+	s *= 747796405u + 2891336453u;
+	uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+	return (w >> 22u) ^ w;
 }
 
-float randomFloat01(inout uint state) {
+float rF(inout uint state) {
     return float(pcg(state)) / 4294967296.0;
 }
 
-vec3 randomUnitVector(inout uint state) {
-    float z = randomFloat01(state) * 2.0 - 1.0;
-    float a = randomFloat01(state) * TAU;
+vec3 rV(inout uint state) {
+    float z = rF(state) * 2.0 - 1.0;
+    float a = rF(state) * TAU;
     float r = sqrt(1.0 - z * z);
     float x = r * cos(a);
     float y = r * sin(a);
     return vec3(x, y, z);
 }
 
-float fresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float f0, float f90) {
+float fRA(float n1, float n2, vec3 n, vec3 i, float f0, float f90) {
         // Schlick aproximation
         float r0 = (n1 - n2) / (n1 + n2);
         r0 *= r0;
-        float cosX = -dot(normal, incident);
+        float cx = -dot(n, i);
         if (n1 > n2) {
             float n = n1 / n2;
-            float sinT2 = n * n * (1.0 - cosX * cosX);
+            float sT2 = n * n * (1.0 - cx * cx);
             // Total internal reflection
-            if (sinT2 > 1.0) {
+            if (sT2 > 1.0) {
                 return f90;
             }
-            cosX = sqrt(1.0 - sinT2);
+            cx = sqrt(1.0 - sT2);
         }
-        float x = 1.0 - cosX;
+        float x = 1.0 - cx;
         float ret = r0 + (1.0 - r0) * x * x * x * x * x;
 
         return mix(f0, f90, ret);
 }
 
-vec4 sampleLattice(vec2 uv) {
+vec4 sL(vec2 uv) {
     uv /= XY_SCALE;
     uv += 0.5;
     return texture(u_normalTexture, uv);
 }
 
-uint iqint3(uvec2 x) {
+uint h3(uvec2 x) {
     uvec2 q = 1103515245u * ((x>>1u) ^ (x.yx));
     uint  n = 1103515245u * ((q.x) ^ (q.y >> 3u));
     return n;
 }
 
-float iqFloat(uvec3 x) {
-    return float(iqint3(uvec2(iqint3(x.xy), x.z))) / 4294967296.0;
+float qf(uvec3 x) {
+    return float(h3(uvec2(h3(x.xy), x.z))) / 4294967296.0;
 }
 
 
-float modulateGround(vec2 p) {
+float mG(vec2 p) {
     p /= XY_SCALE;
     p *= 2.;
 
     uvec3 rp = uvec3(p + 1000., GROUND_SEED);
-    vec4 c = vec4(iqFloat(rp + uvec3(0, 0, 0)),
-                  iqFloat(rp + uvec3(1, 0, 0)),
-                  iqFloat(rp + uvec3(0, 1, 0)),
-                  iqFloat(rp + uvec3(1, 1, 0)));
+    vec4 c = vec4(qf(rp + uvec3(0, 0, 0)),
+                  qf(rp + uvec3(1, 0, 0)),
+                  qf(rp + uvec3(0, 1, 0)),
+                  qf(rp + uvec3(1, 1, 0)));
     vec2 r = fract(p);
     return
         c.x +
@@ -156,193 +156,191 @@ float modulateGround(vec2 p) {
         smoothstep(0.0, 1.0, r.y);
 }
 
-vec3 getGround(vec3 rayPos, vec3 rayDir, inout uint rngState) {
+vec3 gG(vec3 rp, vec3 rd) {
     vec3 g1 = GROUND_COL;
     vec3 g2 = GROUND_ACCENT_COL;
 
-    float t = -(rayPos.z - HEIGHT) / rayDir.z;
-    vec2 pt = rayPos.xy + rayDir.xy * t;
+    float t = -(rp.z - HEIGHT) / rd.z;
+    vec2 pt = rp.xy + rd.xy * t;
     pt += 0.5;
-    float noise = ign(gl_FragCoord.xy);
-    noise = (noise - 0.5) * 0.1;
+    float ns = ign(gl_FragCoord.xy);
+    ns = (ns - 0.5) * 0.1;
 
-    return mix(g1, g2, noise + modulateGround(pt));
+    return mix(g1, g2, ns + mG(pt));
 }
 
-vec3 light(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
+vec3 lgt(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
     float blend = smoothstep(a1, a2, dot(rayDir, lightDir));
     return color * blend;
 }
 
-vec3 environment(vec3 rayPos, vec3 rayDir, inout uint rngState) {
-    vec3 col;
-    vec3 ground = getGround(rayPos, rayDir, rngState);
-    vec3 mid = HORIZON_COL;
-    vec3 sky = SKY_COL;
-    float midGroundBlend = smoothstep(-0.999, -0.998, rayDir.z);
-    float skyMidBlend = smoothstep(-0.2, 0.2, rayDir.z);
-    col = mix(ground, mid, midGroundBlend);
-    col = mix(col, sky, skyMidBlend);
+vec3 ev(vec3 rp, vec3 rd) {
+    vec3 c;
+    vec3 g = gG(rp, rd);
+    vec3 m = HORIZON_COL;
+    vec3 s = SKY_COL;
+    float mgb = smoothstep(-0.999, -0.998, rd.z);
+    float smb = smoothstep(-0.2, 0.2, rd.z);
+    c = mix(g, m, mgb);
+    c = mix(c, s, smb);
 
-    vec3 lightDir;
-    col += light(rayDir, LIGHT_1_COL, LIGHT_1_DIR, 0.83, 0.88);
-    col += light(rayDir, LIGHT_2_COL, LIGHT_2_DIR, 0.7, 0.78);
-    col += light(rayDir, LIGHT_3_COL, LIGHT_3_DIR, 0.83, 0.88);
-    return col;
+    c += lgt(rd, LIGHT_1_COL, LIGHT_1_DIR, 0.83, 0.88);
+    c += lgt(rd, LIGHT_2_COL, LIGHT_2_DIR, 0.7, 0.78);
+    c += lgt(rd, LIGHT_3_COL, LIGHT_3_DIR, 0.83, 0.88);
+    return c;
 }
 
 
-bool hitZPlane(vec3 rayPos, vec3 rayDir, float height, out vec3 pt) {
-    // hit z-plane at z = height
-    float t = -(rayPos.z - height) / rayDir.z;
-    pt = rayPos + rayDir * t;
+bool hzp(vec3 rp, vec3 rd, float h, out vec3 pt) {
+    // hit z-plane at z = h
+    float t = -(rp.z - h) / rd.z;
+    pt = rp + rd * t;
 
-    return t > c_minRayDist;
+    return t > cmrd;
 }
 
 
-vec3 binarySearchMarch(vec3 p0, vec3 p1, bool inside, out vec4 tex) {
-    // assumes either p0 or p1 is inside height map
+vec3 bsm(vec3 p0, vec3 p1, bool I, out vec4 t) {
+    // assumes either p0 or p1 is i height map
     vec3 p = mix(p0, p1, 0.5);
     for (int i = 0; i < SEARCH_ITER; i++) {
-        tex = sampleLattice(p.xy);
-        if (inside ^^ (abs(p.z) > tex.w)) {
+        t = sL(p.xy);
+        if (I ^^ (abs(p.z) > t.w)) {
             p0 = p;
         } else {
             p1 = p;
         }
         p = mix(p0, p1, 0.5);
     }
-    tex = sampleLattice(p.xy);
+    t = sL(p.xy);
     return p;
 }
 
-bool hitLatticeMarch(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
-    bool hit;
-    vec3 pos = rayPos;
-    vec3 dir = rayDir;
-    if (rayPos.z > HEIGHT) {
-        hit = hitZPlane(rayPos, rayDir, HEIGHT, pos);
-        if (!hit) {
+bool hLM(vec3 rp, vec3 rd, inout HD hd) {
+    bool h;
+    vec3 p = rp;
+    vec3 dir = rd;
+    if (rp.z > HEIGHT) {
+        h = hzp(rp, rd, HEIGHT, p);
+        if (!h) {
             return false;
         }
     }
-    vec4 tex = sampleLattice(pos.xy);
-    bool isInside = abs(pos.z) < tex.w;
-    float stepLen;
+    vec4 t = sL(p.xy);
+    bool iI = abs(p.z) < t.w;
+    float sl;
     for (int i = 0; i < MARCH_ITER; i++) {
-        stepLen = abs(abs(pos.z) - tex.w);
-        pos += dir * stepLen;
-        tex = sampleLattice(pos.xy);
-        if (isInside != abs(pos.z) < tex.w) {
-            pos = binarySearchMarch(pos - dir * stepLen, pos, isInside, tex);
+        sl = abs(abs(p.z) - t.w);
+        p += dir * sl;
+        t = sL(p.xy);
+        if (iI != abs(p.z) < t.w) {
+            p = bsm(p - dir * sl, p, iI, t);
             break;
         }
     }
-    tex = sampleLattice(pos.xy);
+    t = sL(p.xy);
 
-    if (tex.w == 0.0) {
+    if (t.w == 0.0) {
         return false;
     }
-    vec3 normal = tex.xyz;
-    normal.z *= sign(pos.z);
-    hitData.normal = normal;
-    hitData.fromInside = isInside;
-    hitData.dist = distance(rayPos, pos);
+    vec3 n = t.xyz;
+    n.z *= sign(p.z);
+    hd.n = n;
+    hd.fI = iI;
+    hd.d = distance(rp, p);
     return true;
 }
 
-bool hitScene(vec3 rayPos, vec3 rayDir, inout HitData hitData) {
-    return hitLatticeMarch(rayPos, rayDir, hitData);
+bool hS(vec3 rp, vec3 rd, inout HD hd) {
+    return hLM(rp, rd, hd);
 }
 
-vec3 traceRay(vec3 rayPos, vec3 rayDir, inout uint rngState) {
+vec3 tR(vec3 rp, vec3 rd, inout uint rst) {
     // initialize
     vec3 ret = vec3(0.0, 0.0, 0.0);
-    vec3 throughput = vec3(1.0, 1.0, 1.0);
-    HitData hitData;
+    vec3 tp = vec3(1.0, 1.0, 1.0);
+    HD hd;
 
-    for (int i = 0; i < c_maxBounces; i++) {
-        hitData.dist = c_far;
-        bool hit = hitScene(rayPos, rayDir, hitData);
+    for (int i = 0; i < cmb; i++) {
+        hd.d = cf;
+        bool hit = hS(rp, rd, hd);
 
         if (!hit) {
             break;
         }
 
-        float specularChance = iceMaterial.specularChance;
-        float refractionChance = iceMaterial.refractionChance;
+        float sC = iM.sC;
+        float rC = iM.rC;
 
-        float rayProbability = 1.0;
-        if (specularChance > 0.0) {
-        	specularChance = fresnelReflectAmount(
-            	hitData.fromInside ? iceMaterial.IOR : 1.0,
-            	!hitData.fromInside ? iceMaterial.IOR : 1.0,
-            	hitData.normal, rayDir, iceMaterial.specularChance, 1.0);
+        float rPb = 1.0;
+        if (sC > 0.0) {
+        	sC = fRA(
+            	hd.fI ? iM.IR : 1.0,
+            	!hd.fI ? iM.IR : 1.0,
+            	hd.n, rd, iM.sC, 1.0);
 
-            float chanceMultiplier = (1.0 - specularChance) / (1.0 - iceMaterial.specularChance);
-            refractionChance *= chanceMultiplier;
+            float cM = (1.0 - sC) / (1.0 - iM.sC);
+            rC *= cM;
         }
 
-        float doSpecular = 0.0;
-        float doRefraction = 0.0;
-        float raySelectRoll = randomFloat01(rngState);
-		if (raySelectRoll < specularChance) {
-            doSpecular = 1.0;
-            rayProbability = specularChance;
+        float dS = 0.0;
+        float dR = 0.0;
+		if (rF(rst) < sC) {
+            dS = 1.0;
+            rPb = sC;
         }
         else {
-            doRefraction = 1.0;
-            rayProbability = refractionChance;
+            dR = 1.0;
+            rPb = rC;
         }
 
         // avoid potential divide by zero
-		rayProbability = max(rayProbability, 0.001);
+		rPb = max(rPb, 0.001);
 
         // nudge ray away from surface
-        rayPos = (rayPos + rayDir * hitData.dist) - sign(doRefraction - 0.5) * hitData.normal * c_rayPosNudge;
+        rp = (rp + rd * hd.d) - sign(dR - 0.5) * hd.n * crn;
 
-        vec3 diffuseRayDir = normalize(sign(doSpecular - 0.5) * hitData.normal + randomUnitVector(rngState));
+        vec3 drd = normalize(sign(dS - 0.5) * hd.n + rV(rst));
 
-        vec3 specularRayDir = reflect(rayDir, hitData.normal);
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, iceMaterial.specularRoughness));
+        vec3 srd = reflect(rd, hd.n);
+        srd = normalize(mix(srd, drd, iM.sR));
 
-        vec3 refractionRayDir = refract(rayDir, hitData.normal, hitData.fromInside ? iceMaterial.IOR : iceMaterial.invIOR);
-        refractionRayDir = normalize(mix(refractionRayDir, diffuseRayDir, iceMaterial.refractionRoughness));
+        vec3 rrd = refract(rd, hd.n, hd.fI ? iM.IR : iM.iIR);
+        rrd = normalize(mix(rrd, drd, iM.rR));
 
-        rayDir = mix(specularRayDir, refractionRayDir, doRefraction);
+        rd = mix(srd, rrd, dR);
 
-        if (doRefraction == 0.0) {
-        	throughput *= iceMaterial.specularColor;
+        if (dR == 0.0) {
+        	tp *= iM.sCo;
         }
 
-        throughput /= rayProbability;
+        tp /= rPb;
 
         // Russian Roulette
-        float p = max(throughput.r, max(throughput.g, throughput.b));
-        if (randomFloat01(rngState) > p)
+        float p = max(tp.r, max(tp.g, tp.b));
+        if (rF(rst) > p)
             break;
 
-        throughput *= 1.0 / p;
+        tp *= 1.0 / p;
     }
-    ret += environment(rayPos, rayDir, rngState) * throughput;
+    ret += ev(rp, rd) * tp;
     return ret;
 }
 
 void main() {
     ivec2 res = textureSize(u_renderTexture, 0);
-    vec2 fragCoord = vec2(gl_FragCoord);
-    uint rngState = uint(uint(fragCoord.x) * uint(1973) + uint(fragCoord.y) * uint(9277) + uint(u_seed) * uint(26699)) | uint(1);
+    vec2 fc = vec2(gl_FragCoord);
+    uint rs = uint(uint(fc.x) * uint(1973) + uint(fc.y) * uint(9277) + uint(u_seed) * uint(26699)) | uint(1);
 
-    vec3 cameraPos, rayDir;
-    cameraPos = v_rayOrigin;
-    rayDir = normalize(v_rayTarget);
+    vec3 cp, rd;
+    cp = v_rayOrigin;
+    rd = normalize(v_rayTarget);
 
-    vec3 color = vec3(0.0);
-    color += traceRay(cameraPos, rayDir, rngState);
+    vec3 c = vec3(0.0);
+    c += tR(cp, rd, rs);
 
-    vec3 prevColor = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0).xyz;
-    color = mix(prevColor, color, u_blend);
+    vec3 pc = texelFetch(u_renderTexture, ivec2(gl_FragCoord.xy), 0).xyz;
+    c = mix(pc, c, u_blend);
 
-    fragColor = vec4(color, u_blend);
+    FC = vec4(c, u_blend);
 }

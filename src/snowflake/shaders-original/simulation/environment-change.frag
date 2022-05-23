@@ -9,15 +9,15 @@ precision mediump float;
 uniform highp sampler2D u_latticeTexture;
 uniform float u_nu;
 
-out vec4 s;
+out vec4 state;
 
 void main() {
-    ivec2 cc = ivec2(gl_FragCoord.xy);
-    vec4 c = texelFetch(u_latticeTexture, cc, 0);
+    ivec2 cellCoord = ivec2(gl_FragCoord.xy);
+    vec4 cell = texelFetch(u_latticeTexture, cellCoord, 0);
 
-    if (c.x < 0.5) {
-        c.w = c.w * u_nu;
+    if (cell.x < 0.5) {
+        cell.w = cell.w * u_nu;
     }
 
-    s = c;
+    state = cell;
 }

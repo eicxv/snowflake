@@ -16,14 +16,14 @@ uniform vec3 u_cameraPosition;
 uniform uint u_seed;
 
 
-uint pcg(inout uint state) {
-	state *= 747796405u + 2891336453u;
-	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
+uint h(inout uint s) {
+	s *= 747796405u + 2891336453u;
+	uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+	return (w >> 22u) ^ w;
 }
 
-float randomFloat01(inout uint state) {
-    return float(pcg(state)) / 4294967296.0;
+float rf(inout uint state) {
+    return float(h(state)) / 4294967296.0;
 }
 
 void main() {
@@ -31,11 +31,11 @@ void main() {
 
   v_rayOrigin = u_cameraPosition;
 
-  uint seed = u_seed;
-  vec2 res = vec2(textureSize(u_renderTexture, 0));
-  vec2 jitter = 2. * (vec2(randomFloat01(seed), randomFloat01(seed)) - 0.5) / res;
-  vec2 target = a_position * (res - 1.0) / res;
-  target += jitter;
-  target *= XY_SCALE * ZOOM_FACTOR;
-  v_rayTarget = (u_viewMatrix * vec4(target, 0.0, 1.0)).xyz;
+  uint s = u_seed;
+  vec2 r = vec2(textureSize(u_renderTexture, 0));
+  vec2 j = 2. * (vec2(rf(s), rf(s)) - 0.5) / r;
+  vec2 t = a_position * (r - 1.0) / r;
+  t += j;
+  t *= XY_SCALE * ZOOM_FACTOR;
+  v_rayTarget = (u_viewMatrix * vec4(t, 0.0, 1.0)).xyz;
 }

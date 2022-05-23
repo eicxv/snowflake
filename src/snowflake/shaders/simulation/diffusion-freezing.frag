@@ -9,25 +9,25 @@ precision mediump float;
 uniform highp sampler2D u_latticeTexture;
 uniform float u_kappa;
 
-out vec4 state;
+out vec4 s;
 
-ivec2 adjustNbTopleft(ivec2 p) {
+ivec2 aT(ivec2 p) {
     p.y = 2 * p.y > p.x ? p.x - p.y : p.y;
     return p;
 }
 
-ivec2 adjustNbBottom(ivec2 p) {
+ivec2 aB(ivec2 p) {
     p = p.y < 0 ? ivec2(p.x + 1, 1) : p;
     return p;
 }
 
-ivec2 adjustNbRight(ivec2 p) {
-    ivec2 res = textureSize(u_latticeTexture, 0);
-     p = p.x >= res.x ? ivec2(p.x - 2, p.y - 1) : p;
+ivec2 aR(ivec2 p) {
+    ivec2 r = textureSize(u_latticeTexture, 0);
+     p = p.x >= r.x ? ivec2(p.x - 2, p.y - 1) : p;
     return p;
 }
 
-vec4[6] neighbors(ivec2 p) {
+vec4[6] ngbs(ivec2 p) {
     // returns incorrect neighbors
     // for p = (0, 0) however the
     // origin is always frozen.
@@ -37,56 +37,56 @@ vec4[6] neighbors(ivec2 p) {
     //  3  C  0
     //   4   5
     vec4[6] nbs;
-    ivec2 coord;
+    ivec2 c;
 
-    coord = adjustNbBottom(adjustNbRight(p + ivec2(1, 0)));
-    nbs[0] = texelFetch(u_latticeTexture, coord, 0);
+    c = aB(aR(p + ivec2(1, 0)));
+    nbs[0] = texelFetch(u_latticeTexture, c, 0);
 
-    coord = adjustNbTopleft(adjustNbRight(p + ivec2(1, 1)));
-    nbs[1] = texelFetch(u_latticeTexture, coord, 0);
+    c = aT(aR(p + ivec2(1, 1)));
+    nbs[1] = texelFetch(u_latticeTexture, c, 0);
 
-    coord = adjustNbTopleft(p + ivec2(0, 1));
-    nbs[2] = texelFetch(u_latticeTexture, coord, 0);
+    c = aT(p + ivec2(0, 1));
+    nbs[2] = texelFetch(u_latticeTexture, c, 0);
 
-    coord = adjustNbTopleft(p + ivec2(-1, 0));
-    nbs[3] = texelFetch(u_latticeTexture, coord, 0);
+    c = aT(p + ivec2(-1, 0));
+    nbs[3] = texelFetch(u_latticeTexture, c, 0);
 
-    coord = adjustNbTopleft(adjustNbBottom(p + ivec2(-1, -1)));
-    nbs[4] = texelFetch(u_latticeTexture, coord, 0);
+    c = aT(aB(p + ivec2(-1, -1)));
+    nbs[4] = texelFetch(u_latticeTexture, c, 0);
 
-    coord = adjustNbRight(adjustNbBottom(p + ivec2(0, -1)));
-    nbs[5] = texelFetch(u_latticeTexture, coord, 0);
+    c = aR(aB(p + ivec2(0, -1)));
+    nbs[5] = texelFetch(u_latticeTexture, c, 0);
 
     return nbs;
 }
 
-vec4 diffusionFreezing(vec4 cell, vec4[6] nbs) {
-    float d = cell.w;
-    float frozenNbs = 0.0;
+vec4 df(vec4 c, vec4[6] nbs) {
+    float d = c.w;
+    float fn = 0.0;
     for (int i = 0; i < 6; i++) {
-        d += nbs[i].x > 0.5 ? cell.w : nbs[i].w;
-        frozenNbs += nbs[i].x;
+        d += nbs[i].x > 0.5 ? c.w : nbs[i].w;
+        fn += nbs[i].x;
     }
-    cell.w = d / 7.0;
+    c.w = d / 7.0;
 
-    if (frozenNbs > 0.5) {
-        cell.y += (1.0 - u_kappa) * cell.w;
-        cell.z += u_kappa * cell.w;
-        cell.w = 0.0;
+    if (fn > 0.5) {
+        c.y += (1.0 - u_kappa) * c.w;
+        c.z += u_kappa * c.w;
+        c.w = 0.0;
     }
-    return cell;
+    return c;
 }
 
 void main() {
-    ivec2 cellCoord = ivec2(gl_FragCoord.xy);
-    vec4 cell = texelFetch(u_latticeTexture, cellCoord, 0);
-    vec4[6] nbs = neighbors(cellCoord);
+    ivec2 cc = ivec2(gl_FragCoord.xy);
+    vec4 c = texelFetch(u_latticeTexture, cc, 0);
+    vec4[6] nbs = ngbs(cc);
 
-    if (cell.x > 0.5) {
-        state = cell;
+    if (c.x > 0.5) {
+        s = c;
         return;
     }
 
-    cell = diffusionFreezing(cell, nbs);
-    state = cell;
+    c = df(c, nbs);
+    s = c;
 }
