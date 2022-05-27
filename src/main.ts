@@ -41,7 +41,7 @@ const visConfig: SnowflakeVisConfig = {
   overwrites: { pathTrace: generateOverwrites() },
 };
 
-const dynamicEnvironmentChance = 0.1;
+const dynamicEnvironmentChance = 0.11;
 
 const generatorConfig: SnowflakeGeneratorConfig = {
   maxGrowthCycles: 80000,
