@@ -3,7 +3,7 @@ import { showError } from "./modal";
 import { generateOverwrites } from "./snowflake/color-generator";
 import { features } from "./snowflake/features";
 import { generateParameters } from "./snowflake/generate-parameters";
-import { createKeyHandler, setCanvasSize } from "./snowflake/handle-input";
+import { registerListeners, setCanvasSize } from "./snowflake/handle-input";
 import {
   fernlikeSimConfig,
   SnowflakeAnimationConfig,
@@ -91,7 +91,7 @@ function main(): void {
   if (window.isFxpreview) {
     controller.runHeadless();
   } else {
-    document.addEventListener("keyup", createKeyHandler(controller));
+    registerListeners(controller);
     controller.run();
   }
 }

@@ -1,7 +1,7 @@
-import { showCrop, showModal } from "../modal";
+import TinyGesture from "tinygesture";
+import { showCrop, showMenu, showModal } from "../modal";
 import { features } from "./features";
 import { SnowflakeController } from "./snowflake-controller";
-import { SnowflakeRenderer } from "./snowflake-renderer";
 import { captureCanvas } from "./utils";
 
 export function setCanvasSize(canvas: HTMLElement, resolution: number): void {
@@ -62,15 +62,24 @@ function saveImage(controller: SnowflakeController): void {
   controller.driver.snowflake.display();
   const canvas = controller.driver.gl.canvas;
   const res = controller.driver.snowflake.visConfig.resolution[0];
-  const fileName = `snoflinga-${window.fxhash}-${res}px.png`;
+  const fileName = `snowflake-${window.fxhash}-${res}px.png`;
   captureCanvas(canvas, fileName);
 }
 
-export function createKeyHandler(
+const menuItems = [
+  ["Set Resolution", setResolution],
+  ["Decrease Noise", increaseQuality],
+  ["Zoom and Crop", setCrop],
+  ["Fast Growth", fastForward],
+  ["Save Image", saveImage],
+  ["About Snowflake", showStats],
+  ["Keyboard Shortcuts", showHelp],
+] as [string, () => void][];
+
+function createKeyHandler(
   controller: SnowflakeController
 ): (e: KeyboardEvent) => void {
   function handleKey(e: KeyboardEvent): void {
-    const sf = controller.driver.snowflake;
     if (document.getElementsByClassName("modal").item(0)) {
       return;
     }
@@ -79,22 +88,25 @@ export function createKeyHandler(
         setResolution(controller);
         break;
       case "q":
-        controller.draw(sf.visConfig.samples);
+        increaseQuality(controller);
         break;
       case "s":
         saveImage(controller);
         break;
       case "f":
-        controller.toggleVis();
+        fastForward(controller);
         break;
       case "a":
-        showStats(sf);
+        showStats(controller);
         break;
       case "h":
         showHelp();
         break;
       case "z":
         setCrop(controller);
+        break;
+      case "m":
+        showMenu(menuItems, [controller]);
         break;
       default:
         break;
@@ -103,7 +115,16 @@ export function createKeyHandler(
   return handleKey;
 }
 
-function showStats(sf: SnowflakeRenderer): void {
+function increaseQuality(controller: SnowflakeController): void {
+  controller.draw(controller.driver.snowflake.visConfig.samples);
+}
+
+function fastForward(controller: SnowflakeController): void {
+  controller.toggleVis();
+}
+
+function showStats(controller: SnowflakeController): void {
+  const sf = controller.driver.snowflake;
   const { mass, time } = sf.stats();
   const feats = features.getFeatures();
   feats[
@@ -134,12 +155,13 @@ function showHelp(): void {
     header: "Instructions",
     content: createTable({
       R: "Change resolution",
-      Q: "Increase quality (run additional render iterations)",
-      Z: "Zoom in on part of snowflake",
+      Q: "Decrease noise (run additional render iterations)",
+      Z: "Zoom and crop",
       S: "Save image as PNG",
-      F: "Toggle simple visualization during growth (faster growth)",
+      F: "Toggle faster growth (simplified visualization)",
       A: "Show information about the snowflake",
-      H: "Show help",
+      H: "Show keyboard shortcuts",
+      M: "Show menu (double tap on mobile)",
     }),
   };
 
@@ -151,4 +173,14 @@ function createTable(values: Record<string, unknown>): string {
     .map(([name, value]) => `<tr><td>${name}:</td><td>${value}</td></tr>`)
     .join("");
   return `<table>${table}</table>`;
+}
+
+export function registerListeners(controller: SnowflakeController): void {
+  document.addEventListener("keyup", createKeyHandler(controller));
+
+  const canvas = controller.driver.gl.canvas;
+  const gesture = new TinyGesture(canvas);
+  gesture.on("doubletap", () =>
+    setTimeout(() => showMenu(menuItems, [controller]), 100)
+  );
 }

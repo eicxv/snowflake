@@ -23,7 +23,8 @@
     "hsluv": "^0.1.0",
     "ml-random-forest": "^2.1.0",
     "modern-normalize": "^1.1.0",
-    "rollup-plugin-glsl-optimize": "^1.0.4"
+    "rollup-plugin-glsl-optimize": "^1.0.4",
+    "tinygesture": "^2.0.0"
   },
   "type": "module"
 }

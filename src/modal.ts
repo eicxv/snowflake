@@ -21,7 +21,7 @@ export function showModal(
     input || button.focus();
   }
   if (settings.cancel) {
-    const button = addButton("cancel", ["cancel"]);
+    const button = addButton("Cancel", ["cancel"]);
     promises.push(createPromiseFromDomEvent(button, "click", () => false));
     content.appendChild(button);
   }
@@ -129,7 +129,8 @@ export function showCrop(init: {
   const { modal, content } = addModal(
     {
       header: "Zoom",
-      content: "Select zoom factor and position.",
+      content:
+        "Select zoom factor and position. <br> It is not possible to change position without increasing zoom.",
     },
     ["classNames"]
   );
@@ -154,7 +155,7 @@ export function showCrop(init: {
     buttons.appendChild(button);
   }
   {
-    const button = addButton("cancel", ["cancel"]);
+    const button = addButton("Cancel", ["cancel"]);
     promises.push(createPromiseFromDomEvent(button, "click", () => false));
     buttons.appendChild(button);
   }
@@ -385,4 +386,37 @@ class Viewport {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+export function showMenu(
+  buttons: [string, (...args: unknown[]) => void][],
+  args: unknown[]
+): void {
+  const promises = [];
+  const { modal, content } = addModal(
+    {
+      header: "Menu",
+      content: "",
+    },
+    []
+  );
+
+  content.setAttribute("style", "display: flex; flex-direction: column");
+
+  for (const [label, action] of buttons) {
+    const button = addButton(label, []);
+    button.addEventListener("click", () => {
+      modal.remove();
+      action(...args);
+    });
+    content.appendChild(button);
+  }
+
+  {
+    const button = addButton("Cancel", ["cancel"]);
+    promises.push(
+      createPromiseFromDomEvent(button, "click", () => modal.remove())
+    );
+    content.appendChild(button);
+  }
 }
