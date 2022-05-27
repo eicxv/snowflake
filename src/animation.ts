@@ -30,7 +30,6 @@ export function createAnimation(driver: SnowflakeDriver): void {
     sf.renderStep = 50;
     sf.pathTrace(150);
     sf.display();
-    // sf.visualize();
     captureCanvas(
       sf.gl.canvas,
       `sf-frame-${id}-${String(i).padStart(5, "0")}.png`

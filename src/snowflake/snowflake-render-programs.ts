@@ -21,7 +21,7 @@ export class InterpolateProgram extends Program {
     vao: WebGLVertexArrayObject,
     framebuffer: WebGLFramebuffer | null = null
   ) {
-    const localUniforms = ["u_latticeTexture"];
+    const localUniforms = ["u_latticeTexture", "u_translate", "u_scale"];
     super(
       gl,
       interpolateSource,
@@ -37,6 +37,9 @@ export class InterpolateProgram extends Program {
     const gl = this.gl;
     const locations = this.locations;
     const uniforms = this.uniforms as SnowflakeUniforms;
+
+    gl.uniform1f(locations.u_scale, uniforms.u_scale);
+    gl.uniform2fv(locations.u_translate, uniforms.u_translate);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_latticeTexture);

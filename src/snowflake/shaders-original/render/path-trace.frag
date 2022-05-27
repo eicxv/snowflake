@@ -101,23 +101,23 @@ vec3 randomUnitVector(inout uint state) {
 }
 
 float fresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float f0, float f90) {
-        // Schlick aproximation
-        float r0 = (n1 - n2) / (n1 + n2);
-        r0 *= r0;
-        float cosX = -dot(normal, incident);
-        if (n1 > n2) {
-            float n = n1 / n2;
-            float sinT2 = n * n * (1.0 - cosX * cosX);
-            // Total internal reflection
-            if (sinT2 > 1.0) {
-                return f90;
-            }
-            cosX = sqrt(1.0 - sinT2);
+    // Schlick aproximation
+    float r0 = (n1 - n2) / (n1 + n2);
+    r0 *= r0;
+    float cosX = -dot(normal, incident);
+    if (n1 > n2) {
+        float n = n1 / n2;
+        float sinT2 = n * n * (1.0 - cosX * cosX);
+        // Total internal reflection
+        if (sinT2 > 1.0) {
+            return f90;
         }
-        float x = 1.0 - cosX;
-        float ret = r0 + (1.0 - r0) * x * x * x * x * x;
+        cosX = sqrt(1.0 - sinT2);
+    }
+    float x = 1.0 - cosX;
+    float ret = r0 + (1.0 - r0) * x * x * x * x * x;
 
-        return mix(f0, f90, ret);
+    return mix(f0, f90, ret);
 }
 
 vec4 sampleLattice(vec2 uv) {

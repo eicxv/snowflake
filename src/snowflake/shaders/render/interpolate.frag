@@ -9,6 +9,8 @@ precision mediump float;
 #define PI 3.14159265359
 
 uniform highp sampler2D u_latticeTexture;
+uniform vec2 u_translate;
+uniform float u_scale;
 
 in vec2 v_uv;
 out vec4 cl;
@@ -145,7 +147,7 @@ vec4 iV(vec2 uv, ivec2 r) {
 
 void main () {
     ivec2 r = textureSize(u_latticeTexture, 0);
-    vec2 uv = (v_uv - 0.5) * 2. * float(r.x);
+    vec2 uv = ((v_uv - 0.5) * 2. * u_scale + u_translate) * float(r.x);
 
     vec4 iv = iV(uv, r);
 

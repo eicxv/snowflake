@@ -101,23 +101,23 @@ vec3 rV(inout uint state) {
 }
 
 float fRA(float n1, float n2, vec3 n, vec3 i, float f0, float f90) {
-        // Schlick aproximation
-        float r0 = (n1 - n2) / (n1 + n2);
-        r0 *= r0;
-        float cx = -dot(n, i);
-        if (n1 > n2) {
-            float n = n1 / n2;
-            float sT2 = n * n * (1.0 - cx * cx);
-            // Total internal reflection
-            if (sT2 > 1.0) {
-                return f90;
-            }
-            cx = sqrt(1.0 - sT2);
+    // Schlick aproximation
+    float r0 = (n1 - n2) / (n1 + n2);
+    r0 *= r0;
+    float cx = -dot(n, i);
+    if (n1 > n2) {
+        float n = n1 / n2;
+        float sT2 = n * n * (1.0 - cx * cx);
+        // Total internal reflection
+        if (sT2 > 1.0) {
+            return f90;
         }
-        float x = 1.0 - cx;
-        float ret = r0 + (1.0 - r0) * x * x * x * x * x;
+        cx = sqrt(1.0 - sT2);
+    }
+    float x = 1.0 - cx;
+    float ret = r0 + (1.0 - r0) * x * x * x * x * x;
 
-        return mix(f0, f90, ret);
+    return mix(f0, f90, ret);
 }
 
 vec4 sL(vec2 uv) {
@@ -169,8 +169,8 @@ vec3 gG(vec3 rp, vec3 rd) {
     return mix(g1, g2, ns + mG(pt));
 }
 
-vec3 lgt(vec3 rayDir, vec3 color, vec3 lightDir, float a1, float a2) {
-    float blend = smoothstep(a1, a2, dot(rayDir, lightDir));
+vec3 lgt(vec3 rd, vec3 color, vec3 ld, float a1, float a2) {
+    float blend = smoothstep(a1, a2, dot(rd, ld));
     return color * blend;
 }
 

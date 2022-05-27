@@ -79,6 +79,8 @@ export class SnowflakeRenderer extends SnowflakeSimulator {
       u_normalBlend: 0.9,
       u_seed: 0,
       u_blend: 1,
+      u_translate: [0, 0] as [number, number],
+      u_scale: 1,
     };
     return uniforms;
   }

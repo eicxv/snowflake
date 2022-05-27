@@ -161,7 +161,6 @@ export class SnowflakeController {
   actions: { grow: number; draw: number; event: Event | null };
   queue: Queue<Event>;
   aniConfig: SnowflakeAnimationConfig;
-  animating = false;
   animateGrowth = true;
   drawCount: number;
   growth: { time: number; radius: number; growthRate: number };

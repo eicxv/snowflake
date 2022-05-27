@@ -88,6 +88,8 @@ export interface SnowflakeRenderUniforms extends Uniforms {
   u_seed: number;
   u_viewMatrix: mat4;
   u_cameraPosition: vec3;
+  u_translate: [number, number];
+  u_scale: number;
 }
 
 export interface SnowflakeUniforms

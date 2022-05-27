@@ -100,7 +100,7 @@ button:focus {
 }
 
 .input {
-  display: block;
+  display: inline;
   padding: 0.8rem 1.6rem;
   color: inherit;
   font-family: inherit;

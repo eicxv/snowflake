@@ -1,4 +1,4 @@
-import { showModal } from "../modal";
+import { showCrop, showModal } from "../modal";
 import { features } from "./features";
 import { SnowflakeController } from "./snowflake-controller";
 import { SnowflakeRenderer } from "./snowflake-renderer";
@@ -34,13 +34,35 @@ async function setResolution(controller: SnowflakeController): Promise<void> {
   controller.driver.snowflake.changeResolution(res);
   controller.interpolated = false;
   controller.driver.snowflake.renderStep = 0;
+  if (controller.terminate) {
+    controller.draw(controller.driver.snowflake.visConfig.samples);
+  }
+}
+
+async function setCrop(controller: SnowflakeController): Promise<void> {
+  const sf = controller.driver.snowflake;
+  const [success, transform] = await showCrop({
+    x: sf.uniforms.u_translate[0],
+    y: sf.uniforms.u_translate[1],
+    scale: sf.uniforms.u_scale,
+  });
+  if (success !== true) {
+    return;
+  }
+  sf.uniforms.u_translate = [transform.x, transform.y];
+  sf.uniforms.u_scale = transform.scale;
+  controller.interpolated = false;
+  controller.driver.snowflake.renderStep = 0;
+  if (controller.terminate) {
+    controller.draw(controller.driver.snowflake.visConfig.samples);
+  }
 }
 
 function saveImage(controller: SnowflakeController): void {
   controller.driver.snowflake.display();
   const canvas = controller.driver.gl.canvas;
   const res = controller.driver.snowflake.visConfig.resolution[0];
-  const fileName = `snowflake-${window.fxhash}-${res}px.png`;
+  const fileName = `snoflinga-${window.fxhash}-${res}px.png`;
   captureCanvas(canvas, fileName);
 }
 
@@ -55,9 +77,6 @@ export function createKeyHandler(
     switch (e.key) {
       case "r":
         setResolution(controller);
-        if (!controller.animating) {
-          controller.draw(sf.visConfig.samples);
-        }
         break;
       case "q":
         controller.draw(sf.visConfig.samples);
@@ -73,6 +92,9 @@ export function createKeyHandler(
         break;
       case "h":
         showHelp();
+        break;
+      case "z":
+        setCrop(controller);
         break;
       default:
         break;
@@ -113,6 +135,7 @@ function showHelp(): void {
     content: createTable({
       R: "Change resolution",
       Q: "Increase quality (run additional render iterations)",
+      Z: "Zoom in on part of snowflake",
       S: "Save image as PNG",
       F: "Toggle simple visualization during growth (faster growth)",
       A: "Show information about the snowflake",

@@ -91,7 +91,7 @@ function main(): void {
   if (window.isFxpreview) {
     controller.runHeadless();
   } else {
-    document.addEventListener("keydown", createKeyHandler(controller));
+    document.addEventListener("keyup", createKeyHandler(controller));
     controller.run();
   }
 }
